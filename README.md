@@ -714,7 +714,7 @@ NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
 
 ```env
 # Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/holon
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/agilite
 
 # Auth
 JWT_SECRET=your-jwt-secret-here
@@ -736,7 +736,7 @@ CLIENT_URL=http://localhost:3000
 ```env
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-POSTGRES_DB=holon
+POSTGRES_DB=agilite
 ```
 
 ---
