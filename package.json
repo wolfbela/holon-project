@@ -1,0 +1,19 @@
+{
+  "name": "holon-project",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"yarn workspace @holon/client dev\" \"yarn workspace @holon/server dev\"",
+    "build": "yarn workspace @holon/shared build && concurrently \"yarn workspace @holon/client build\" \"yarn workspace @holon/server build\"",
+    "clean": "rm -rf node_modules client/node_modules server/node_modules shared/node_modules",
+    "test": "yarn workspace @holon/server test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
