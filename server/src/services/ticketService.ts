@@ -6,6 +6,7 @@ import {
   ListTicketsQueryInput,
   Ticket,
   PaginatedResponse,
+  TicketStats,
 } from '@holon/shared';
 import { AppError } from '../utils/AppError';
 import { JwtPayload } from '../middleware/auth';
@@ -202,4 +203,74 @@ export async function deleteTicket(ticketId: string): Promise<void> {
   if (!result) {
     throw new AppError('Ticket not found', 404);
   }
+}
+
+export function formatResponseTime(seconds: number | null): string {
+  if (!seconds || seconds <= 0) return '0m';
+
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+export async function getTicketStats(): Promise<TicketStats> {
+  const [countsResult, avgResult] = await Promise.all([
+    sql<{
+      total: string;
+      open: string;
+      closed: string;
+      low: string;
+      medium: string;
+      high: string;
+    }>`
+      SELECT
+        COUNT(*)::text AS total,
+        COUNT(*) FILTER (WHERE status = 'open')::text AS open,
+        COUNT(*) FILTER (WHERE status = 'closed')::text AS closed,
+        COUNT(*) FILTER (WHERE priority = 'low')::text AS low,
+        COUNT(*) FILTER (WHERE priority = 'medium')::text AS medium,
+        COUNT(*) FILTER (WHERE priority = 'high')::text AS high
+      FROM tickets
+    `.execute(db),
+
+    sql<{ avg_seconds: string | null }>`
+      SELECT AVG(EXTRACT(EPOCH FROM (first_reply.min_created - t.created_at)))::text AS avg_seconds
+      FROM tickets t
+      INNER JOIN (
+        SELECT ticket_id, MIN(created_at) AS min_created
+        FROM replies
+        WHERE author_type = 'agent'
+        GROUP BY ticket_id
+      ) first_reply ON first_reply.ticket_id = t.id
+    `.execute(db),
+  ]);
+
+  const counts = countsResult.rows[0] ?? {
+    total: '0',
+    open: '0',
+    closed: '0',
+    low: '0',
+    medium: '0',
+    high: '0',
+  };
+
+  const avgSeconds = avgResult.rows[0]?.avg_seconds
+    ? parseFloat(avgResult.rows[0].avg_seconds)
+    : null;
+
+  return {
+    total: Number(counts.total),
+    open: Number(counts.open),
+    closed: Number(counts.closed),
+    byPriority: {
+      low: Number(counts.low),
+      medium: Number(counts.medium),
+      high: Number(counts.high),
+    },
+    avgResponseTime: formatResponseTime(avgSeconds),
+  };
 }
