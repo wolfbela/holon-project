@@ -4,3 +4,4 @@ export * from './types/ticket';
 export * from './types/reply';
 export * from './types/notification';
 export * from './types/api';
+export * from './types/auth';
