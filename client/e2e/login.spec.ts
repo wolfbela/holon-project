@@ -151,7 +151,7 @@ test.describe('Login page', () => {
     }) => {
       await page.goto('/login');
       await page.getByRole('button', { name: /sign in/i }).click();
-      await expect(page.getByText(/invalid/i).first()).toBeVisible();
+      await expect(page.getByText(/please enter a valid email/i)).toBeVisible();
     });
 
     test('should show password validation error on empty submit', async ({
