@@ -102,10 +102,7 @@ const validCreateBody = {
   message: 'The zipper on my backpack was broken when it arrived.',
 };
 
-function generateToken(
-  payload: object,
-  options?: jwt.SignOptions,
-): string {
+function generateToken(payload: object, options?: jwt.SignOptions): string {
   return jwt.sign(payload, process.env.JWT_SECRET!, options);
 }
 
@@ -116,15 +113,6 @@ const customerToken = generateToken(
 
 const adminToken = generateToken(
   { userId: mockAdminRow.id, email: mockAdminRow.email, role: 'admin' },
-  { expiresIn: '1h' as jwt.SignOptions['expiresIn'] },
-);
-
-const customer2Token = generateToken(
-  {
-    userId: mockCustomer2Row.id,
-    email: mockCustomer2Row.email,
-    role: 'customer',
-  },
   { expiresIn: '1h' as jwt.SignOptions['expiresIn'] },
 );
 
@@ -333,7 +321,7 @@ describe('Tickets API', () => {
 
     describe('Missing required fields', () => {
       it('should return 400 when product_id is missing', async () => {
-        const { product_id: _, ...body } = validCreateBody;
+        const { product_id: _product_id, ...body } = validCreateBody;
         const res = await request(app)
           .post('/api/tickets')
           .set('Authorization', `Bearer ${customerToken}`)
@@ -344,7 +332,7 @@ describe('Tickets API', () => {
       });
 
       it('should return 400 when product_name is missing', async () => {
-        const { product_name: _, ...body } = validCreateBody;
+        const { product_name: _product_name, ...body } = validCreateBody;
         const res = await request(app)
           .post('/api/tickets')
           .set('Authorization', `Bearer ${customerToken}`)
@@ -354,7 +342,7 @@ describe('Tickets API', () => {
       });
 
       it('should return 400 when subject is missing', async () => {
-        const { subject: _, ...body } = validCreateBody;
+        const { subject: _subject, ...body } = validCreateBody;
         const res = await request(app)
           .post('/api/tickets')
           .set('Authorization', `Bearer ${customerToken}`)
@@ -364,7 +352,7 @@ describe('Tickets API', () => {
       });
 
       it('should return 400 when message is missing', async () => {
-        const { message: _, ...body } = validCreateBody;
+        const { message: _message, ...body } = validCreateBody;
         const res = await request(app)
           .post('/api/tickets')
           .set('Authorization', `Bearer ${customerToken}`)
@@ -570,7 +558,11 @@ describe('Tickets API', () => {
         const res = await request(app)
           .post('/api/tickets')
           .set('Authorization', `Bearer ${customerToken}`)
-          .send({ ...validCreateBody, unknown_field: 'hack', status: 'closed' });
+          .send({
+            ...validCreateBody,
+            unknown_field: 'hack',
+            status: 'closed',
+          });
 
         expect(res.status).toBe(201);
       });
@@ -1084,8 +1076,7 @@ describe('Tickets API', () => {
           product_id: 1,
           product_name: 'Fjallraven Backpack',
           subject: 'Product arrived damaged',
-          message:
-            'The zipper on my backpack was broken when it arrived.',
+          message: 'The zipper on my backpack was broken when it arrived.',
           status: 'open',
           priority: 'medium',
           created_at: '2026-01-15T10:00:00.000Z',
@@ -1096,9 +1087,7 @@ describe('Tickets API', () => {
 
     describe('Authentication & authorization', () => {
       it('should return 401 when no token is provided', async () => {
-        const res = await request(app).get(
-          `/api/tickets/${mockTicketRow.id}`,
-        );
+        const res = await request(app).get(`/api/tickets/${mockTicketRow.id}`);
 
         expect(res.status).toBe(401);
       });
