@@ -1,4 +1,4 @@
-# Holon - Customer Support Ticketing System
+# Agilite - Customer Support Ticketing System
 
 A full-stack customer support ticketing system where customers can browse products, create support tickets, and have real-time conversations with support agents. Built as a modern, polished web application with role-based access, real-time notifications, and analytics dashboard.
 
@@ -26,7 +26,7 @@ A full-stack customer support ticketing system where customers can browse produc
 
 ## Overview
 
-Holon is a 4+ page web application that simulates a real customer support ticketing system. Each ticket is related to a product fetched from the [Fake Store API](https://api.escuelajs.co/api/v1/products).
+Agilite is a 4+ page web application that simulates a real customer support ticketing system. Each ticket is related to a product fetched from the [Fake Store API](https://api.escuelajs.co/api/v1/products).
 
 The application serves two types of users:
 
@@ -480,10 +480,15 @@ Socket.io runs on the same Express server. Clients connect with their JWT token 
 
 #### Landing Page (`/`)
 
-- Hero section with app description
-- Feature highlights
-- "Login" and "Register" call-to-action buttons
-- Clean, professional first impression
+- Asymmetric hero layout with left-aligned headline and floating stat cards on desktop
+- "Customer Support Platform" label with staggered entrance animations (framer-motion)
+- Four feature highlights: Smart Ticketing, Live Conversations, Team Insights, Built-in Roles
+- "Get started" and "Sign in" call-to-action buttons (hero + nav + footer)
+- Responsive design: mobile stack to desktop grid, stat cards hidden on small screens
+- Skip-to-content link and aria-labeled navigation for accessibility
+- Dark mode support via design token system
+- Sticky navigation header with backdrop blur
+- Subtle grid pattern background and accent line decoration
 
 #### Login Page (`/login`)
 
@@ -501,7 +506,7 @@ Socket.io runs on the same Express server. Clients connect with their JWT token 
 
 ### Customer Pages
 
-**Navbar:** `[Logo: Holon] [Products] [My Tickets] ---- [Bell] [Avatar/Logout]`
+**Navbar:** `[Logo: Agilite] [Products] [My Tickets] ---- [Bell] [Avatar/Logout]`
 
 #### Products Catalog (`/products`)
 
@@ -544,7 +549,7 @@ Socket.io runs on the same Express server. Clients connect with their JWT token 
 
 ```
 ┌──────────────────────┐
-│  Holon     [Bell] [Avatar]
+│  Agilite     [Bell] [Avatar]
 │──────────────────────│
 │  Dashboard           │
 │  Tickets             │
