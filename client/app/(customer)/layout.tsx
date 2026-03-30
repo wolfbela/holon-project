@@ -1,3 +1,5 @@
+import { CustomerNavbar } from './_components/navbar/customer-navbar';
+
 export default function CustomerLayout({
   children,
 }: {
@@ -5,8 +7,10 @@ export default function CustomerLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Customer navbar will be added by issue #22 */}
-      <main className="flex-1">{children}</main>
+      <CustomerNavbar />
+      <main id="main" className="flex-1">
+        {children}
+      </main>
     </div>
   );
 }
