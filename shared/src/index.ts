@@ -5,3 +5,4 @@ export * from './types/reply';
 export * from './types/notification';
 export * from './types/api';
 export * from './types/auth';
+export * from './types/product';
