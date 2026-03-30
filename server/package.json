@@ -8,13 +8,16 @@
     "start": "node dist/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "jest --verbose"
+    "test": "jest --verbose",
+    "db:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
     "@holon/shared": "1.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^4.21.2",
+    "kysely": "^0.28.14",
+    "pg": "^8.20.0",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
@@ -22,6 +25,7 @@
     "@types/express": "^5.0.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.13.14",
+    "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
     "eslint": "^10.1.0",
     "jest": "^30.3.0",
