@@ -20,8 +20,21 @@ export const UpdateTicketSchema = z.object({
   priority: TicketPrioritySchema.optional(),
 });
 
+export const ListTicketsQuerySchema = z.object({
+  status: TicketStatusSchema.optional(),
+  priority: TicketPrioritySchema.optional(),
+  search: z.string().optional(),
+  sort: z
+    .enum(['created_at', 'updated_at', 'priority', 'status'])
+    .default('created_at'),
+  order: z.enum(['asc', 'desc']).default('desc'),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+});
+
 export type CreateTicketInput = z.infer<typeof CreateTicketSchema>;
 export type UpdateTicketInput = z.infer<typeof UpdateTicketSchema>;
+export type ListTicketsQueryInput = z.infer<typeof ListTicketsQuerySchema>;
 
 export interface Ticket {
   id: string;
