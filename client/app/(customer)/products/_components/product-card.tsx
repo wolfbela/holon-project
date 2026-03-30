@@ -6,11 +6,8 @@ import { ArrowRight, ImageIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Product } from '@shared/types/product';
 import { cn } from '@/lib/utils';
+import { cleanImageUrl } from '@/lib/images';
 import { getCategoryColor } from './category-colors';
-
-function cleanImageUrl(url: string): string {
-  return url.replace(/^[\["]+|[\]"]+$/g, '');
-}
 
 const priceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',

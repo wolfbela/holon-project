@@ -3,10 +3,7 @@
 import { useState } from 'react';
 import { ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-function cleanImageUrl(url: string): string {
-  return url.replace(/^[\["]+|[\]"]+$/g, '');
-}
+import { cleanImageUrl } from '@/lib/images';
 
 interface ProductImageGalleryProps {
   images: string[];
