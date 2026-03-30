@@ -15,7 +15,8 @@
     "lint": "concurrently \"yarn workspace @holon/client lint\" \"yarn workspace @holon/server lint\" \"yarn workspace @holon/shared lint\"",
     "lint:fix": "concurrently \"yarn workspace @holon/client lint:fix\" \"yarn workspace @holon/server lint:fix\" \"yarn workspace @holon/shared lint:fix\"",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:migrate": "yarn workspace @holon/server db:migrate"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
