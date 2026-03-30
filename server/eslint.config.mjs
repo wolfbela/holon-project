@@ -1,6 +1,16 @@
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 
-export default tseslint.config(tseslint.configs.recommended, prettierConfig, {
-  ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
-});
+export default tseslint.config(
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
+  tseslint.configs.recommended,
+  prettierConfig,
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
+    },
+  },
+);

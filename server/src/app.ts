@@ -1,11 +1,26 @@
 import express from 'express';
+import cors from 'cors';
+import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
+
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+app.use(errorHandler);
 
 export default app;
