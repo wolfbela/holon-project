@@ -9,6 +9,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
   "devDependencies": {
     "eslint": "^10.1.0",
     "typescript": "^5.7.3",
