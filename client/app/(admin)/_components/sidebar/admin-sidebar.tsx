@@ -30,10 +30,10 @@ import {
 import { useEffect, useState } from 'react';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/tickets', label: 'Tickets', icon: Ticket },
-  { href: '/products', label: 'Products', icon: Package },
-  { href: '/team', label: 'Team', icon: Users },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-blue-500' },
+  { href: '/tickets', label: 'Tickets', icon: Ticket, color: 'text-amber-500' },
+  { href: '/products', label: 'Products', icon: Package, color: 'text-emerald-500' },
+  { href: '/team', label: 'Team', icon: Users, color: 'text-violet-500' },
 ] as const;
 
 function getInitials(name: string): string {
@@ -91,7 +91,7 @@ export function AdminSidebar() {
                       tooltip={item.label}
                       render={<Link href={item.href} />}
                     >
-                      <item.icon className="size-4" />
+                      <item.icon className={`size-4 ${item.color}`} />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
