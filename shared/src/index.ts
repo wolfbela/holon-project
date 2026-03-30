@@ -1,2 +1,6 @@
 // @holon/shared — barrel export
-// Type files will be added in future issues
+export * from './types/user';
+export * from './types/ticket';
+export * from './types/reply';
+export * from './types/notification';
+export * from './types/api';
