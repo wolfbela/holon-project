@@ -69,10 +69,7 @@ const validLoginBody = {
   password: 'password123',
 };
 
-function generateToken(
-  payload: object,
-  options?: jwt.SignOptions,
-): string {
+function generateToken(payload: object, options?: jwt.SignOptions): string {
   return jwt.sign(payload, process.env.JWT_SECRET!, options);
 }
 
@@ -167,9 +164,7 @@ describe('Auth API', () => {
       });
 
       it('should hash the password with bcrypt using 10 salt rounds', async () => {
-        await request(app)
-          .post('/api/auth/register')
-          .send(validRegisterBody);
+        await request(app).post('/api/auth/register').send(validRegisterBody);
 
         expect(mockHash).toHaveBeenCalledWith('password123', 10);
       });
@@ -209,7 +204,7 @@ describe('Auth API', () => {
 
     describe('Missing required fields', () => {
       it('should return 400 when email is missing', async () => {
-        const { email: _, ...body } = validRegisterBody;
+        const { email: _email, ...body } = validRegisterBody;
         const res = await request(app).post('/api/auth/register').send(body);
 
         expect(res.status).toBe(400);
@@ -217,7 +212,7 @@ describe('Auth API', () => {
       });
 
       it('should return 400 when name is missing', async () => {
-        const { name: _, ...body } = validRegisterBody;
+        const { name: _name, ...body } = validRegisterBody;
         const res = await request(app).post('/api/auth/register').send(body);
 
         expect(res.status).toBe(400);
@@ -225,7 +220,7 @@ describe('Auth API', () => {
       });
 
       it('should return 400 when password is missing', async () => {
-        const { password: _, ...body } = validRegisterBody;
+        const { password: _password, ...body } = validRegisterBody;
         const res = await request(app).post('/api/auth/register').send(body);
 
         expect(res.status).toBe(400);
@@ -518,7 +513,8 @@ describe('Auth API', () => {
       it('should not crash with very long SQL injection in name', async () => {
         mockSelectExecuteTakeFirst.mockResolvedValue(undefined);
         mockHash.mockResolvedValue('$2b$10$hashedpassword');
-        const injectionName = "'; DROP TABLE users; SELECT * FROM users WHERE '1'='1";
+        const injectionName =
+          "'; DROP TABLE users; SELECT * FROM users WHERE '1'='1";
         mockInsertExecuteTakeFirstOrThrow.mockResolvedValue({
           ...mockUserRow,
           name: injectionName,
@@ -799,12 +795,10 @@ describe('Auth API', () => {
       });
 
       it('should reject XSS payload in email field (invalid format)', async () => {
-        const res = await request(app)
-          .post('/api/auth/login')
-          .send({
-            email: '<script>alert(1)</script>',
-            password: 'password123',
-          });
+        const res = await request(app).post('/api/auth/login').send({
+          email: '<script>alert(1)</script>',
+          password: 'password123',
+        });
 
         expect(res.status).toBe(400);
       });
@@ -1031,14 +1025,9 @@ describe('Auth API', () => {
   describe('requireAdmin middleware', () => {
     const adminApp = express();
     adminApp.use(express.json());
-    adminApp.get(
-      '/test/admin',
-      requireAuth(),
-      requireAdmin(),
-      (_req, res) => {
-        res.json({ message: 'admin access granted' });
-      },
-    );
+    adminApp.get('/test/admin', requireAuth(), requireAdmin(), (_req, res) => {
+      res.json({ message: 'admin access granted' });
+    });
     adminApp.use(errorHandler);
 
     it('should return 403 when user role is customer', async () => {
