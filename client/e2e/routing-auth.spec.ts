@@ -114,7 +114,7 @@ test.describe('Auth pages', () => {
       await page.goto('/login');
       await expect(page).toHaveURL('/login');
       await expect(
-        page.getByRole('heading', { name: /login/i }),
+        page.getByRole('heading', { name: /sign in/i }),
       ).toBeVisible();
     });
 
@@ -387,7 +387,7 @@ test.describe('Dark mode', () => {
     const html = page.locator('html');
     await expect(html).not.toHaveClass(/dark/);
     await expect(
-      page.getByRole('heading', { name: /login/i }),
+      page.getByRole('heading', { name: /sign in/i }),
     ).toBeVisible();
   });
 
@@ -395,7 +395,7 @@ test.describe('Dark mode', () => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.goto('/login');
     await expect(
-      page.getByRole('heading', { name: /login/i }),
+      page.getByRole('heading', { name: /sign in/i }),
     ).toBeVisible();
   });
 
@@ -419,7 +419,7 @@ test.describe('Responsive design', () => {
     test('should render /login centered on desktop', async ({ page }) => {
       await page.goto('/login');
       await expect(
-        page.getByRole('heading', { name: /login/i }),
+        page.getByRole('heading', { name: /sign in/i }),
       ).toBeVisible();
       const container = page.locator('div.max-w-sm');
       await expect(container).toBeVisible();
@@ -432,7 +432,7 @@ test.describe('Responsive design', () => {
     test('should render /login centered on tablet', async ({ page }) => {
       await page.goto('/login');
       await expect(
-        page.getByRole('heading', { name: /login/i }),
+        page.getByRole('heading', { name: /sign in/i }),
       ).toBeVisible();
     });
   });
@@ -443,7 +443,7 @@ test.describe('Responsive design', () => {
     test('should render /login on mobile', async ({ page }) => {
       await page.goto('/login');
       await expect(
-        page.getByRole('heading', { name: /login/i }),
+        page.getByRole('heading', { name: /sign in/i }),
       ).toBeVisible();
     });
 
@@ -509,7 +509,7 @@ test.describe('Accessibility', () => {
     await page.goto('/login');
     const h1 = page.locator('h1');
     await expect(h1).toHaveCount(1);
-    await expect(h1).toHaveText(/login/i);
+    await expect(h1).toHaveText(/sign in/i);
   });
 
   test('register page has proper heading hierarchy', async ({ page }) => {
