@@ -28,7 +28,7 @@ export default function LandingPage() {
           className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4"
         >
           <Link href="/" className="text-sm font-bold tracking-tight">
-            Holon
+            Agilite
           </Link>
 
           <div className="flex items-center gap-2">

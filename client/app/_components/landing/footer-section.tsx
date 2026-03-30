@@ -5,7 +5,7 @@ export function FooterSection() {
     <footer className="border-t px-4 py-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold">Holon</p>
+          <p className="text-sm font-semibold">Agilite</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Customer support, done right.
           </p>

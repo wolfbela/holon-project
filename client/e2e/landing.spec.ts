@@ -13,7 +13,7 @@ test.describe('Landing page', () => {
 
   test.describe('Page loads', () => {
     test('should render the page without errors', async ({ page }) => {
-      await expect(page).toHaveTitle(/holon/i);
+      await expect(page).toHaveTitle(/agilite/i);
     });
 
     test('should display the navigation header', async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('Landing page', () => {
     });
 
     test('should display the brand name in nav', async ({ page }) => {
-      const brand = page.getByRole('navigation').getByRole('link', { name: /holon/i });
+      const brand = page.getByRole('navigation').getByRole('link', { name: /agilite/i });
       await expect(brand).toBeVisible();
     });
 
@@ -73,7 +73,7 @@ test.describe('Landing page', () => {
     test('should display the footer', async ({ page }) => {
       await expect(page.getByRole('contentinfo')).toBeVisible();
       await expect(
-        page.getByRole('contentinfo').getByText('Holon')
+        page.getByRole('contentinfo').getByText('Agilite')
       ).toBeVisible();
     });
   });
@@ -136,7 +136,7 @@ test.describe('Landing page', () => {
     });
 
     test('should have logo link pointing to home', async ({ page }) => {
-      const logo = page.getByRole('navigation').getByRole('link', { name: /holon/i });
+      const logo = page.getByRole('navigation').getByRole('link', { name: /agilite/i });
       await expect(logo).toHaveAttribute('href', '/');
     });
   });
@@ -394,7 +394,7 @@ test.describe('Landing page', () => {
       // Tab through the page and check interactive elements get focus
       const expectedFocusOrder = [
         /skip to content/i,
-        /holon/i,
+        /agilite/i,
         /sign in/i,
         /get started/i,
       ];

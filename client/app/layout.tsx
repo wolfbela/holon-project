@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Holon',
+  title: 'Agilite',
   description: 'Customer support ticketing system',
 };
 

@@ -64,7 +64,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground"
           >
-            Holon connects your customers with your support team through a
+            Agilite connects your customers with your support team through a
             ticketing system built for speed and clarity. Real-time
             conversations, smart prioritization, and insights that help you
             improve.
