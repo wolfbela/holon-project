@@ -11,9 +11,15 @@
     "dev": "concurrently \"yarn workspace @holon/client dev\" \"yarn workspace @holon/server dev\"",
     "build": "yarn workspace @holon/shared build && concurrently \"yarn workspace @holon/client build\" \"yarn workspace @holon/server build\"",
     "clean": "rm -rf node_modules client/node_modules server/node_modules shared/node_modules",
-    "test": "yarn workspace @holon/server test"
+    "test": "yarn workspace @holon/server test",
+    "lint": "concurrently \"yarn workspace @holon/client lint\" \"yarn workspace @holon/server lint\" \"yarn workspace @holon/shared lint\"",
+    "lint:fix": "concurrently \"yarn workspace @holon/client lint:fix\" \"yarn workspace @holon/server lint:fix\" \"yarn workspace @holon/shared lint:fix\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1"
   }
 }
