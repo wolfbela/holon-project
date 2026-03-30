@@ -39,51 +39,64 @@ async function setAuthCookie(context: BrowserContext, token: string) {
 }
 
 // ===================================================================
-// LOGIN PAGE — /login
+// REGISTER PAGE — /register
 // ===================================================================
 
-test.describe('Login page', () => {
+test.describe('Register page', () => {
   // -----------------------------------------------------------------
   // A. Page loads correctly
   // -----------------------------------------------------------------
 
   test.describe('Page loads', () => {
     test('should render with heading and subtitle', async ({ page }) => {
-      await page.goto('/login');
-      await expect(page).toHaveURL('/login');
+      await page.goto('/register');
+      await expect(page).toHaveURL('/register');
       await expect(
-        page.getByRole('heading', { name: /sign in/i }),
+        page.getByRole('heading', { name: /register/i }),
       ).toBeVisible();
       await expect(
-        page.getByText(/sign in to your account to continue/i),
+        page.getByText(/create a new account to get started/i),
       ).toBeVisible();
     });
 
-    test('should render email and password fields', async ({ page }) => {
-      await page.goto('/login');
+    test('should render name, email, and password fields', async ({
+      page,
+    }) => {
+      await page.goto('/register');
+      await expect(page.getByLabel(/name/i)).toBeVisible();
       await expect(page.getByLabel(/email/i)).toBeVisible();
       await expect(page.getByLabel(/password/i)).toBeVisible();
     });
 
-    test('should render the sign in button', async ({ page }) => {
-      await page.goto('/login');
+    test('should render the create account button', async ({ page }) => {
+      await page.goto('/register');
       await expect(
-        page.getByRole('button', { name: /sign in/i }),
+        page.getByRole('button', { name: /create account/i }),
       ).toBeVisible();
     });
 
-    test('should render the register link', async ({ page }) => {
-      await page.goto('/login');
-      await expect(page.getByRole('link', { name: /register/i })).toBeVisible();
+    test('should render the sign in link', async ({ page }) => {
+      await page.goto('/register');
+      await expect(
+        page.getByRole('link', { name: /sign in/i }),
+      ).toBeVisible();
     });
 
     test('should have correct input placeholders', async ({ page }) => {
-      await page.goto('/login');
+      await page.goto('/register');
+      await expect(page.getByPlaceholder('John Doe')).toBeVisible();
       await expect(
         page.getByPlaceholder('you@example.com'),
       ).toBeVisible();
       await expect(
-        page.getByPlaceholder('Enter your password'),
+        page.getByPlaceholder('At least 6 characters'),
+      ).toBeVisible();
+    });
+
+    test('should show password hint below the field', async ({ page }) => {
+      await page.goto('/register');
+      await expect(
+        page.getByText(/must be at least 6 characters/i),
       ).toBeVisible();
     });
 
@@ -92,7 +105,7 @@ test.describe('Login page', () => {
       page.on('console', (msg) => {
         if (msg.type() === 'error') errors.push(msg.text());
       });
-      await page.goto('/login');
+      await page.goto('/register');
       await page.waitForTimeout(1000);
       expect(errors).toHaveLength(0);
     });
@@ -103,21 +116,21 @@ test.describe('Login page', () => {
   // -----------------------------------------------------------------
 
   test.describe('Authentication redirects', () => {
-    test('should redirect authenticated customer away from login', async ({
+    test('should redirect authenticated customer away from register', async ({
       page,
       context,
     }) => {
       await setAuthCookie(context, customerToken);
-      await page.goto('/login');
+      await page.goto('/register');
       await expect(page).toHaveURL(/\/products/);
     });
 
-    test('should redirect authenticated admin away from login', async ({
+    test('should redirect authenticated admin away from register', async ({
       page,
       context,
     }) => {
       await setAuthCookie(context, adminToken);
-      await page.goto('/login');
+      await page.goto('/register');
       await expect(page).toHaveURL(/\/dashboard/);
     });
   });
@@ -127,14 +140,14 @@ test.describe('Login page', () => {
   // -----------------------------------------------------------------
 
   test.describe('Navigation', () => {
-    test('register link should navigate to /register', async ({ page }) => {
-      await page.goto('/login');
-      await page.getByRole('link', { name: /register/i }).click();
-      await expect(page).toHaveURL(/\/register/);
+    test('sign in link should navigate to /login', async ({ page }) => {
+      await page.goto('/register');
+      await page.getByRole('link', { name: /sign in/i }).click();
+      await expect(page).toHaveURL(/\/login/);
     });
 
     test('logo link should navigate to landing page', async ({ page }) => {
-      await page.goto('/login');
+      await page.goto('/register');
       const logo = page.getByRole('link', { name: /agilite/i }).first();
       await logo.click();
       await expect(page).toHaveURL('/');
@@ -146,63 +159,118 @@ test.describe('Login page', () => {
   // -----------------------------------------------------------------
 
   test.describe('Form validation', () => {
+    test('should show name validation error on empty submit', async ({
+      page,
+    }) => {
+      await page.goto('/register');
+      await page.getByRole('button', { name: /create account/i }).click();
+      await expect(page.getByText(/name is required/i)).toBeVisible();
+    });
+
     test('should show email validation error on empty submit', async ({
       page,
     }) => {
-      await page.goto('/login');
-      await page.getByRole('button', { name: /sign in/i }).click();
-      await expect(page.getByText(/please enter a valid email/i)).toBeVisible();
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('Test User');
+      await page.getByRole('button', { name: /create account/i }).click();
+      await expect(
+        page.getByText(/please enter a valid email/i),
+      ).toBeVisible();
     });
 
     test('should show password validation error on empty submit', async ({
       page,
     }) => {
-      await page.goto('/login');
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('Test User');
       await page.getByLabel(/email/i).fill('user@example.com');
-      await page.getByRole('button', { name: /sign in/i }).click();
-      // Password min(1) — error should appear for empty password
+      await page.getByRole('button', { name: /create account/i }).click();
+      // Password min(6) — error replaces the hint
       await expect(
-        page.locator('p.text-destructive').last(),
+        page.getByText(/password must be at least 6 characters/i),
       ).toBeVisible();
     });
 
     test('should show validation error for invalid email format', async ({
       page,
     }) => {
-      await page.goto('/login');
-      // Use dispatch to bypass HTML5 email validation and let Zod handle it
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('Test User');
       await page.getByLabel(/email/i).fill('not-an-email');
       await page.getByLabel(/password/i).fill('password123');
-      await page.getByRole('button', { name: /sign in/i }).click();
-      // Either HTML5 validation prevents submit (no error text) or Zod shows error
+      await page.getByRole('button', { name: /create account/i }).click();
+      // HTML5 type="email" blocks submission with its own validation
       const emailInput = page.getByLabel(/email/i);
       const validationMessage = await emailInput.evaluate(
         (el: HTMLInputElement) => el.validationMessage,
       );
-      // HTML5 type="email" blocks submission with its own validation
       expect(validationMessage.length).toBeGreaterThan(0);
+    });
+
+    test('should show validation error for short password', async ({
+      page,
+    }) => {
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('Test User');
+      await page.getByLabel(/email/i).fill('user@example.com');
+      await page.getByLabel(/password/i).fill('abc');
+      await page.getByRole('button', { name: /create account/i }).click();
+      await expect(
+        page.getByText(/password must be at least 6 characters/i),
+      ).toBeVisible();
     });
 
     test('should set aria-invalid on fields with errors', async ({
       page,
     }) => {
-      await page.goto('/login');
-      await page.getByRole('button', { name: /sign in/i }).click();
+      await page.goto('/register');
+      await page.getByRole('button', { name: /create account/i }).click();
+      await expect(page.getByLabel(/name/i)).toHaveAttribute(
+        'aria-invalid',
+        'true',
+      );
       await expect(page.getByLabel(/email/i)).toHaveAttribute(
         'aria-invalid',
         'true',
       );
     });
 
-    test('should preserve email input after validation failure', async ({
+    test('should preserve input values after validation failure', async ({
       page,
     }) => {
-      await page.goto('/login');
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('Test User');
       await page.getByLabel(/email/i).fill('user@example.com');
-      await page.getByRole('button', { name: /sign in/i }).click();
+      // Leave password empty to trigger error
+      await page.getByRole('button', { name: /create account/i }).click();
+      await expect(page.getByLabel(/name/i)).toHaveValue('Test User');
       await expect(page.getByLabel(/email/i)).toHaveValue(
         'user@example.com',
       );
+    });
+
+    test('should replace password hint with error on validation failure', async ({
+      page,
+    }) => {
+      await page.goto('/register');
+      // Hint should be visible initially
+      await expect(
+        page.locator('p.text-muted-foreground', {
+          hasText: /must be at least 6 characters/i,
+        }),
+      ).toBeVisible();
+
+      await page.getByLabel(/name/i).fill('Test User');
+      await page.getByLabel(/email/i).fill('user@example.com');
+      await page.getByLabel(/password/i).fill('abc');
+      await page.getByRole('button', { name: /create account/i }).click();
+
+      // Error should replace hint
+      await expect(
+        page.locator('p.text-destructive', {
+          hasText: /password must be at least 6 characters/i,
+        }),
+      ).toBeVisible();
     });
   });
 
@@ -212,127 +280,102 @@ test.describe('Login page', () => {
 
   test.describe('Form submission', () => {
     test('should show loading state during submission', async ({ page }) => {
-      // Intercept the login request and delay it
-      await page.route('**/api/auth/login', async (route) => {
+      await page.route('**/api/auth/register', async (route) => {
         await new Promise((r) => setTimeout(r, 2000));
         await route.fulfill({
-          status: 200,
+          status: 201,
           contentType: 'application/json',
           body: JSON.stringify({
-            token: 'fake-jwt',
+            token: customerToken,
             user: {
-              id: '1',
-              email: 'user@example.com',
-              name: 'Test',
+              id: 'cust-new',
+              email: 'newuser@example.com',
+              name: 'New User',
               role: 'customer',
             },
           }),
         });
       });
 
-      await page.goto('/login');
-      await page.getByLabel(/email/i).fill('user@example.com');
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('New User');
+      await page.getByLabel(/email/i).fill('newuser@example.com');
       await page.getByLabel(/password/i).fill('password123');
-      await page.getByRole('button', { name: /sign in/i }).click();
+      await page.getByRole('button', { name: /create account/i }).click();
 
       // Button should show loading state
-      await expect(page.getByText(/signing in/i)).toBeVisible();
+      await expect(page.getByText(/creating account/i)).toBeVisible();
 
       // Inputs should be disabled
+      await expect(page.getByLabel(/name/i)).toBeDisabled();
       await expect(page.getByLabel(/email/i)).toBeDisabled();
       await expect(page.getByLabel(/password/i)).toBeDisabled();
     });
 
-    test('should show error toast on invalid credentials', async ({
+    test('should redirect to /products on successful registration', async ({
       page,
     }) => {
-      // Use 400 instead of 401 — the api-client auto-redirects on 401
-      await page.route('**/api/auth/login', async (route) => {
+      await page.route('**/api/auth/register', async (route) => {
         await route.fulfill({
-          status: 400,
+          status: 201,
           contentType: 'application/json',
-          body: JSON.stringify({ error: 'Invalid credentials' }),
+          body: JSON.stringify({
+            token: customerToken,
+            user: {
+              id: 'cust-new',
+              email: 'newuser@example.com',
+              name: 'New User',
+              role: 'customer',
+            },
+          }),
         });
       });
 
-      await page.goto('/login');
-      await page.getByLabel(/email/i).fill('user@example.com');
-      await page.getByLabel(/password/i).fill('wrongpassword');
-      await page.getByRole('button', { name: /sign in/i }).click();
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('New User');
+      await page.getByLabel(/email/i).fill('newuser@example.com');
+      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('button', { name: /create account/i }).click();
 
-      // Toast should appear with error message
-      await expect(page.getByText(/invalid credentials/i)).toBeVisible();
+      await expect(page).toHaveURL(/\/products/, { timeout: 5000 });
+    });
+
+    test('should show error toast when email already exists', async ({
+      page,
+    }) => {
+      await page.route('**/api/auth/register', async (route) => {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Email already in use' }),
+        });
+      });
+
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('Existing User');
+      await page.getByLabel(/email/i).fill('existing@example.com');
+      await page.getByLabel(/password/i).fill('password123');
+      await page.getByRole('button', { name: /create account/i }).click();
+
+      await expect(page.getByText(/email already in use/i)).toBeVisible();
     });
 
     test('should show generic error toast on network failure', async ({
       page,
     }) => {
-      await page.route('**/api/auth/login', async (route) => {
+      await page.route('**/api/auth/register', async (route) => {
         await route.abort('connectionrefused');
       });
 
-      await page.goto('/login');
-      await page.getByLabel(/email/i).fill('user@example.com');
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('New User');
+      await page.getByLabel(/email/i).fill('newuser@example.com');
       await page.getByLabel(/password/i).fill('password123');
-      await page.getByRole('button', { name: /sign in/i }).click();
+      await page.getByRole('button', { name: /create account/i }).click();
 
       await expect(
         page.getByText(/something went wrong/i),
       ).toBeVisible();
-    });
-
-    test('should redirect customer to /products on successful login', async ({
-      page,
-    }) => {
-      await page.route('**/api/auth/login', async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            token: customerToken,
-            user: {
-              id: 'cust-1',
-              email: 'customer1@example.com',
-              name: 'Customer',
-              role: 'customer',
-            },
-          }),
-        });
-      });
-
-      await page.goto('/login');
-      await page.getByLabel(/email/i).fill('customer1@example.com');
-      await page.getByLabel(/password/i).fill('customer123');
-      await page.getByRole('button', { name: /sign in/i }).click();
-
-      await expect(page).toHaveURL(/\/products/, { timeout: 5000 });
-    });
-
-    test('should redirect admin to /dashboard on successful login', async ({
-      page,
-    }) => {
-      await page.route('**/api/auth/login', async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            token: adminToken,
-            user: {
-              id: 'admin-1',
-              email: 'admin@holon.com',
-              name: 'Admin',
-              role: 'admin',
-            },
-          }),
-        });
-      });
-
-      await page.goto('/login');
-      await page.getByLabel(/email/i).fill('admin@holon.com');
-      await page.getByLabel(/password/i).fill('admin123');
-      await page.getByRole('button', { name: /sign in/i }).click();
-
-      await expect(page).toHaveURL(/\/dashboard/, { timeout: 5000 });
     });
   });
 
@@ -343,18 +386,18 @@ test.describe('Login page', () => {
   test.describe('Dark mode', () => {
     test('should render correctly in light mode', async ({ page }) => {
       await page.emulateMedia({ colorScheme: 'light' });
-      await page.goto('/login');
+      await page.goto('/register');
       await expect(
-        page.getByRole('heading', { name: /sign in/i }),
+        page.getByRole('heading', { name: /register/i }),
       ).toBeVisible();
       await expect(page.getByLabel(/email/i)).toBeVisible();
     });
 
     test('should render correctly in dark mode', async ({ page }) => {
       await page.emulateMedia({ colorScheme: 'dark' });
-      await page.goto('/login');
+      await page.goto('/register');
       await expect(
-        page.getByRole('heading', { name: /sign in/i }),
+        page.getByRole('heading', { name: /register/i }),
       ).toBeVisible();
       await expect(page.getByLabel(/email/i)).toBeVisible();
     });
@@ -367,8 +410,8 @@ test.describe('Login page', () => {
   test.describe('Responsive design', () => {
     test('should show branding panel on desktop', async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 800 });
-      await page.goto('/login');
-      await expect(page.getByText(/welcome back/i)).toBeVisible();
+      await page.goto('/register');
+      await expect(page.getByText(/create your account/i)).toBeVisible();
       await expect(
         page.getByText(/smart ticketing system/i),
       ).toBeVisible();
@@ -376,29 +419,33 @@ test.describe('Login page', () => {
 
     test('should hide branding panel on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 812 });
-      await page.goto('/login');
+      await page.goto('/register');
       // Desktop branding panel should be hidden
-      await expect(page.getByText(/welcome back/i)).toBeHidden();
+      await expect(
+        page.getByRole('heading', { name: /create your account/i }),
+      ).toBeHidden();
       // Mobile branding should be visible
       await expect(
         page.locator('.lg\\:hidden').getByText(/agilite/i),
       ).toBeVisible();
     });
 
-    test('should show mobile branding on tablet', async ({ page }) => {
+    test('should hide branding panel on tablet', async ({ page }) => {
       await page.setViewportSize({ width: 768, height: 1024 });
-      await page.goto('/login');
-      // Below lg breakpoint, desktop panel hidden, mobile branding visible
-      await expect(page.getByText(/welcome back/i)).toBeHidden();
+      await page.goto('/register');
+      await expect(
+        page.getByRole('heading', { name: /create your account/i }),
+      ).toBeHidden();
     });
 
     test('should render form properly on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 812 });
-      await page.goto('/login');
+      await page.goto('/register');
+      await expect(page.getByLabel(/name/i)).toBeVisible();
       await expect(page.getByLabel(/email/i)).toBeVisible();
       await expect(page.getByLabel(/password/i)).toBeVisible();
       await expect(
-        page.getByRole('button', { name: /sign in/i }),
+        page.getByRole('button', { name: /create account/i }),
       ).toBeVisible();
     });
   });
@@ -409,15 +456,15 @@ test.describe('Login page', () => {
 
   test.describe('Accessibility', () => {
     test('should have exactly one h1 heading', async ({ page }) => {
-      await page.goto('/login');
+      await page.goto('/register');
       const h1 = page.locator('h1');
       await expect(h1).toHaveCount(1);
-      await expect(h1).toHaveText(/sign in/i);
+      await expect(h1).toHaveText(/register/i);
     });
 
     test('should have labels associated with inputs', async ({ page }) => {
-      await page.goto('/login');
-      // getByLabel works when label[for] matches input[id]
+      await page.goto('/register');
+      await expect(page.getByLabel(/name/i)).toBeVisible();
       await expect(page.getByLabel(/email/i)).toBeVisible();
       await expect(page.getByLabel(/password/i)).toBeVisible();
     });
@@ -425,10 +472,17 @@ test.describe('Login page', () => {
     test('should support keyboard navigation (tab order)', async ({
       page,
     }) => {
-      await page.goto('/login');
+      await page.goto('/register');
 
-      // Focus the email input first
-      await page.getByLabel(/email/i).focus();
+      // Focus the name input first
+      await page.getByLabel(/name/i).focus();
+      const nameFocused = await page.evaluate(
+        () => document.activeElement?.getAttribute('id'),
+      );
+      expect(nameFocused).toBe('name');
+
+      // Tab to email input
+      await page.keyboard.press('Tab');
       const emailFocused = await page.evaluate(
         () => document.activeElement?.getAttribute('id'),
       );
@@ -446,31 +500,31 @@ test.describe('Login page', () => {
       const buttonFocused = await page.evaluate(
         () => document.activeElement?.textContent?.trim(),
       );
-      expect(buttonFocused).toBe('Sign in');
+      expect(buttonFocused).toBe('Create account');
     });
 
     test('should submit form with Enter key', async ({ page }) => {
-      await page.route('**/api/auth/login', async (route) => {
+      await page.route('**/api/auth/register', async (route) => {
         await route.fulfill({
-          status: 400,
+          status: 409,
           contentType: 'application/json',
-          body: JSON.stringify({ error: 'Invalid credentials' }),
+          body: JSON.stringify({ error: 'Email already in use' }),
         });
       });
 
-      await page.goto('/login');
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('Test User');
       await page.getByLabel(/email/i).fill('user@example.com');
       await page.getByLabel(/password/i).fill('password123');
       await page.keyboard.press('Enter');
 
-      // Should attempt submission — error toast appears because we mocked a 400
-      await expect(page.getByText(/invalid credentials/i)).toBeVisible();
+      await expect(page.getByText(/email already in use/i)).toBeVisible();
     });
 
     test('should have password field with type=password', async ({
       page,
     }) => {
-      await page.goto('/login');
+      await page.goto('/register');
       await expect(page.getByLabel(/password/i)).toHaveAttribute(
         'type',
         'password',
@@ -478,14 +532,18 @@ test.describe('Login page', () => {
     });
 
     test('should have autocomplete attributes', async ({ page }) => {
-      await page.goto('/login');
+      await page.goto('/register');
+      await expect(page.getByLabel(/name/i)).toHaveAttribute(
+        'autocomplete',
+        'name',
+      );
       await expect(page.getByLabel(/email/i)).toHaveAttribute(
         'autocomplete',
         'email',
       );
       await expect(page.getByLabel(/password/i)).toHaveAttribute(
         'autocomplete',
-        'current-password',
+        'new-password',
       );
     });
   });
