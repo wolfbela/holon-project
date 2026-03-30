@@ -36,6 +36,8 @@ let mockSelectExecuteTakeFirst: jest.Mock;
 let mockSelectExecute: jest.Mock;
 let mockUpdateExecute: jest.Mock;
 let mockUpdateExecuteTakeFirstOrThrow: jest.Mock;
+let mockInsertExecuteTakeFirstOrThrow: jest.Mock;
+let mockInsertExecute: jest.Mock;
 
 // --- Test data ---
 
@@ -206,6 +208,18 @@ function setupDbMocks() {
     }
   }
   mockedDb.updateTable.mockReturnValue(updateChain);
+
+  mockInsertExecuteTakeFirstOrThrow = jest.fn();
+  mockInsertExecute = jest.fn();
+  const insertChain: Record<string, jest.Mock> = {
+    values: jest.fn(),
+    returningAll: jest.fn(),
+    executeTakeFirstOrThrow: mockInsertExecuteTakeFirstOrThrow,
+    execute: mockInsertExecute,
+  };
+  insertChain.values.mockReturnValue(insertChain);
+  insertChain.returningAll.mockReturnValue(insertChain);
+  mockedDb.insertInto.mockReturnValue(insertChain);
 }
 
 // ===================================================================
@@ -849,5 +863,200 @@ describe('Route priority', () => {
     expect(res.body.message).toBe('All notifications marked as read');
     // Should not hit selectFrom (which markAsRead does to find notification by id)
     expect(mockedDb.selectFrom).not.toHaveBeenCalled();
+  });
+});
+
+// ===================================================================
+// createNotification (service function)
+// ===================================================================
+
+import {
+  createNotification,
+  createNotificationsForAdmins,
+} from '../src/services/notificationService';
+
+describe('createNotification', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupDbMocks();
+  });
+
+  it('should create a notification and return it', async () => {
+    const newNotifRow = {
+      id: 'nnn00000-0000-0000-0000-000000000010',
+      user_id: mockUserRow.id,
+      type: 'new_reply',
+      ticket_id: mockTicketRow.id,
+      message: 'New reply on ticket TK-0001',
+      read: false,
+      created_at: new Date('2026-01-20T10:00:00Z'),
+    };
+    mockInsertExecuteTakeFirstOrThrow.mockResolvedValueOnce(newNotifRow);
+
+    const result = await createNotification({
+      userId: mockUserRow.id,
+      type: 'new_reply',
+      ticketId: mockTicketRow.id,
+      message: 'New reply on ticket TK-0001',
+    });
+
+    expect(result).toMatchObject({
+      id: newNotifRow.id,
+      user_id: mockUserRow.id,
+      type: 'new_reply',
+      ticket_id: mockTicketRow.id,
+      message: 'New reply on ticket TK-0001',
+      read: false,
+    });
+    expect(result.created_at).toBe('2026-01-20T10:00:00.000Z');
+  });
+
+  it('should create a ticket_closed notification', async () => {
+    const closedNotifRow = {
+      id: 'nnn00000-0000-0000-0000-000000000011',
+      user_id: mockUserRow.id,
+      type: 'ticket_closed',
+      ticket_id: mockTicketRow.id,
+      message: 'Your ticket TK-0001 has been closed',
+      read: false,
+      created_at: new Date('2026-01-20T11:00:00Z'),
+    };
+    mockInsertExecuteTakeFirstOrThrow.mockResolvedValueOnce(closedNotifRow);
+
+    const result = await createNotification({
+      userId: mockUserRow.id,
+      type: 'ticket_closed',
+      ticketId: mockTicketRow.id,
+      message: 'Your ticket TK-0001 has been closed',
+    });
+
+    expect(result.type).toBe('ticket_closed');
+    expect(result.read).toBe(false);
+  });
+
+  it('should call insertInto on notifications table', async () => {
+    mockInsertExecuteTakeFirstOrThrow.mockResolvedValueOnce({
+      id: 'nnn-mock',
+      user_id: mockUserRow.id,
+      type: 'new_ticket',
+      ticket_id: mockTicketRow.id,
+      message: 'test',
+      read: false,
+      created_at: new Date(),
+    });
+
+    await createNotification({
+      userId: mockUserRow.id,
+      type: 'new_ticket',
+      ticketId: mockTicketRow.id,
+      message: 'test',
+    });
+
+    expect(mockedDb.insertInto).toHaveBeenCalledWith('notifications');
+  });
+});
+
+// ===================================================================
+// createNotificationsForAdmins (service function)
+// ===================================================================
+
+describe('createNotificationsForAdmins', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupDbMocks();
+  });
+
+  it('should create notifications for all admins', async () => {
+    const admin1Id = '660e8400-e29b-41d4-a716-446655440000';
+    const admin2Id = '770e8400-e29b-41d4-a716-446655440001';
+
+    // First selectFrom call: get admin IDs
+    mockSelectExecute.mockResolvedValueOnce([
+      { id: admin1Id },
+      { id: admin2Id },
+    ]);
+
+    // insertInto returns created rows
+    mockInsertExecute.mockResolvedValueOnce([
+      {
+        id: 'notif-1',
+        user_id: admin1Id,
+        type: 'new_ticket',
+        ticket_id: mockTicketRow.id,
+        message: 'New ticket: TK-0001',
+        read: false,
+        created_at: new Date('2026-01-20T10:00:00Z'),
+      },
+      {
+        id: 'notif-2',
+        user_id: admin2Id,
+        type: 'new_ticket',
+        ticket_id: mockTicketRow.id,
+        message: 'New ticket: TK-0001',
+        read: false,
+        created_at: new Date('2026-01-20T10:00:00Z'),
+      },
+    ]);
+
+    const results = await createNotificationsForAdmins({
+      type: 'new_ticket',
+      ticketId: mockTicketRow.id,
+      message: 'New ticket: TK-0001',
+    });
+
+    expect(results).toHaveLength(2);
+    expect(results[0].user_id).toBe(admin1Id);
+    expect(results[1].user_id).toBe(admin2Id);
+    expect(results[0].type).toBe('new_ticket');
+  });
+
+  it('should return empty array when no admins exist', async () => {
+    mockSelectExecute.mockResolvedValueOnce([]);
+
+    const results = await createNotificationsForAdmins({
+      type: 'new_ticket',
+      ticketId: mockTicketRow.id,
+      message: 'New ticket: TK-0001',
+    });
+
+    expect(results).toEqual([]);
+    expect(mockedDb.insertInto).not.toHaveBeenCalled();
+  });
+
+  it('should query users table for admin role', async () => {
+    mockSelectExecute.mockResolvedValueOnce([]);
+
+    await createNotificationsForAdmins({
+      type: 'new_reply',
+      ticketId: mockTicketRow.id,
+      message: 'test',
+    });
+
+    expect(mockedDb.selectFrom).toHaveBeenCalledWith('users');
+  });
+
+  it('should handle single admin', async () => {
+    const adminId = '660e8400-e29b-41d4-a716-446655440000';
+    mockSelectExecute.mockResolvedValueOnce([{ id: adminId }]);
+    mockInsertExecute.mockResolvedValueOnce([
+      {
+        id: 'notif-single',
+        user_id: adminId,
+        type: 'new_reply',
+        ticket_id: mockTicketRow.id,
+        message: 'Customer replied',
+        read: false,
+        created_at: new Date('2026-01-20T10:00:00Z'),
+      },
+    ]);
+
+    const results = await createNotificationsForAdmins({
+      type: 'new_reply',
+      ticketId: mockTicketRow.id,
+      message: 'Customer replied',
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].user_id).toBe(adminId);
   });
 });
