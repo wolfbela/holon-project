@@ -20,6 +20,29 @@ jest.mock('../src/db', () => ({
   },
 }));
 
+jest.mock('../src/socket/emitters', () => ({
+  emitNewReply: jest.fn(),
+  emitTicketUpdated: jest.fn(),
+  emitTicketCreated: jest.fn(),
+  emitNewNotification: jest.fn(),
+}));
+
+jest.mock('../src/services/notificationService', () => ({
+  createNotification: jest.fn().mockResolvedValue({
+    id: 'mock-notif-id',
+    user_id: 'mock-user-id',
+    type: 'new_reply',
+    ticket_id: 'mock-ticket-id',
+    message: 'mock notification',
+    read: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+  }),
+  createNotificationsForAdmins: jest.fn().mockResolvedValue([]),
+  listNotifications: jest.fn(),
+  markAsRead: jest.fn(),
+  markAllAsRead: jest.fn(),
+}));
+
 // --- Typed references ---
 
 const mockedDb = db as unknown as {
