@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: agilite-postgres
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -11,7 +11,7 @@ services:
     volumes:
       - agilite-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d agilite"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d agilite']
       interval: 5s
       timeout: 5s
       retries: 5

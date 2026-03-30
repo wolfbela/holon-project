@@ -58,7 +58,14 @@ describe('shadcn/ui component imports', () => {
   });
 
   it('should import Card components', () => {
-    const { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } = require('@/components/ui/card');
+    const {
+      Card,
+      CardHeader,
+      CardFooter,
+      CardTitle,
+      CardDescription,
+      CardContent,
+    } = require('@/components/ui/card');
     expect(Card).toBeDefined();
     expect(CardHeader).toBeDefined();
     expect(CardFooter).toBeDefined();
@@ -68,7 +75,16 @@ describe('shadcn/ui component imports', () => {
   });
 
   it('should import Table components', () => {
-    const { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption } = require('@/components/ui/table');
+    const {
+      Table,
+      TableHeader,
+      TableBody,
+      TableFooter,
+      TableHead,
+      TableRow,
+      TableCell,
+      TableCaption,
+    } = require('@/components/ui/table');
     expect(Table).toBeDefined();
     expect(TableHeader).toBeDefined();
     expect(TableBody).toBeDefined();
@@ -80,7 +96,15 @@ describe('shadcn/ui component imports', () => {
   });
 
   it('should import Dialog components', () => {
-    const { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } = require('@/components/ui/dialog');
+    const {
+      Dialog,
+      DialogTrigger,
+      DialogContent,
+      DialogHeader,
+      DialogFooter,
+      DialogTitle,
+      DialogDescription,
+    } = require('@/components/ui/dialog');
     expect(Dialog).toBeDefined();
     expect(DialogTrigger).toBeDefined();
     expect(DialogContent).toBeDefined();
@@ -101,14 +125,23 @@ describe('shadcn/ui component imports', () => {
   });
 
   it('should import Avatar components', () => {
-    const { Avatar, AvatarImage, AvatarFallback } = require('@/components/ui/avatar');
+    const {
+      Avatar,
+      AvatarImage,
+      AvatarFallback,
+    } = require('@/components/ui/avatar');
     expect(Avatar).toBeDefined();
     expect(AvatarImage).toBeDefined();
     expect(AvatarFallback).toBeDefined();
   });
 
   it('should import DropdownMenu components', () => {
-    const { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } = require('@/components/ui/dropdown-menu');
+    const {
+      DropdownMenu,
+      DropdownMenuTrigger,
+      DropdownMenuContent,
+      DropdownMenuItem,
+    } = require('@/components/ui/dropdown-menu');
     expect(DropdownMenu).toBeDefined();
     expect(DropdownMenuTrigger).toBeDefined();
     expect(DropdownMenuContent).toBeDefined();
@@ -121,7 +154,13 @@ describe('shadcn/ui component imports', () => {
   });
 
   it('should import Select components', () => {
-    const { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } = require('@/components/ui/select');
+    const {
+      Select,
+      SelectTrigger,
+      SelectContent,
+      SelectItem,
+      SelectValue,
+    } = require('@/components/ui/select');
     expect(Select).toBeDefined();
     expect(SelectTrigger).toBeDefined();
     expect(SelectContent).toBeDefined();
@@ -141,7 +180,9 @@ describe('shadcn/ui component rendering', () => {
   it('should render Button with text', () => {
     const { Button } = require('@/components/ui/button');
     render(<Button>Click me</Button>);
-    expect(screen.getByRole('button', { name: 'Click me' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Click me' }),
+    ).toBeInTheDocument();
   });
 
   it('should render Button with variant classes', () => {
@@ -165,21 +206,33 @@ describe('shadcn/ui component rendering', () => {
   });
 
   it('should render Card with content', () => {
-    const { Card, CardHeader, CardTitle, CardContent } = require('@/components/ui/card');
+    const {
+      Card,
+      CardHeader,
+      CardTitle,
+      CardContent,
+    } = require('@/components/ui/card');
     render(
       <Card>
         <CardHeader>
           <CardTitle>Test Card</CardTitle>
         </CardHeader>
         <CardContent>Card body</CardContent>
-      </Card>
+      </Card>,
     );
     expect(screen.getByText('Test Card')).toBeInTheDocument();
     expect(screen.getByText('Card body')).toBeInTheDocument();
   });
 
   it('should render Table with rows', () => {
-    const { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } = require('@/components/ui/table');
+    const {
+      Table,
+      TableHeader,
+      TableBody,
+      TableRow,
+      TableHead,
+      TableCell,
+    } = require('@/components/ui/table');
     render(
       <Table>
         <TableHeader>
@@ -192,7 +245,7 @@ describe('shadcn/ui component rendering', () => {
             <TableCell>John</TableCell>
           </TableRow>
         </TableBody>
-      </Table>
+      </Table>,
     );
     expect(screen.getByText('Name')).toBeInTheDocument();
     expect(screen.getByText('John')).toBeInTheDocument();
@@ -227,7 +280,7 @@ describe('shadcn/ui component rendering', () => {
     render(
       <Avatar>
         <AvatarFallback>JD</AvatarFallback>
-      </Avatar>
+      </Avatar>,
     );
     expect(screen.getByText('JD')).toBeInTheDocument();
   });
@@ -241,7 +294,7 @@ describe('ThemeProvider', () => {
     render(
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <div>Theme content</div>
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     expect(screen.getByText('Theme content')).toBeInTheDocument();
   });
@@ -252,7 +305,7 @@ describe('ThemeProvider', () => {
       render(
         <ThemeProvider attribute="class" defaultTheme="light">
           <span>Light mode</span>
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     }).not.toThrow();
   });
@@ -263,7 +316,7 @@ describe('ThemeProvider', () => {
       render(
         <ThemeProvider attribute="class" defaultTheme="dark">
           <span>Dark mode</span>
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     }).not.toThrow();
   });
