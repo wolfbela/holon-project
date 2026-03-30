@@ -4,6 +4,7 @@ import {
   UpdateTicketSchema,
   ListTicketsQuerySchema,
   ListTicketsQueryInput,
+  CreateReplySchema,
 } from '@holon/shared';
 import { validate, validateQuery } from '../middleware/validate';
 import { requireAuth, requireAdmin } from '../middleware/auth';
@@ -16,6 +17,7 @@ import {
   deleteTicket,
   getTicketStats,
 } from '../services/ticketService';
+import { createReply, listReplies } from '../services/replyService';
 
 const router = Router();
 
@@ -106,6 +108,37 @@ router.delete(
     try {
       await deleteTicket(req.params.id as string);
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.post(
+  '/:id/replies',
+  requireAuth(),
+  validate(CreateReplySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const reply = await createReply(
+        req.params.id as string,
+        req.body,
+        req.user!,
+      );
+      res.status(201).json(reply);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  '/:id/replies',
+  requireAuth(),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const replies = await listReplies(req.params.id as string, req.user!);
+      res.json(replies);
     } catch (err) {
       next(err);
     }
