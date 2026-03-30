@@ -14,6 +14,7 @@ import {
   getTicket,
   updateTicket,
   deleteTicket,
+  getTicketStats,
 } from '../services/ticketService';
 
 const router = Router();
@@ -46,6 +47,20 @@ router.get(
         req.user!,
       );
       res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  '/stats',
+  requireAuth(),
+  requireAdmin(),
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const stats = await getTicketStats();
+      res.json(stats);
     } catch (err) {
       next(err);
     }

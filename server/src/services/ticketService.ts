@@ -1,4 +1,3 @@
-import { sql } from 'kysely';
 import { db } from '../db';
 import {
   CreateTicketInput,
@@ -6,6 +5,7 @@ import {
   ListTicketsQueryInput,
   Ticket,
   PaginatedResponse,
+  TicketStats,
 } from '@holon/shared';
 import { AppError } from '../utils/AppError';
 import { JwtPayload } from '../middleware/auth';
@@ -202,4 +202,69 @@ export async function deleteTicket(ticketId: string): Promise<void> {
   if (!result) {
     throw new AppError('Ticket not found', 404);
   }
+}
+
+export function formatResponseTime(seconds: number | null): string {
+  if (!seconds || seconds <= 0) return '0m';
+
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+export async function getTicketStats(): Promise<TicketStats> {
+  const countQuery = db
+    .selectFrom('tickets')
+    .select(db.fn.countAll<string>().as('count'));
+
+  const [
+    totalResult,
+    openResult,
+    closedResult,
+    lowResult,
+    mediumResult,
+    highResult,
+    responseTimes,
+  ] = await Promise.all([
+    countQuery.executeTakeFirstOrThrow(),
+    countQuery.where('status', '=', 'open').executeTakeFirstOrThrow(),
+    countQuery.where('status', '=', 'closed').executeTakeFirstOrThrow(),
+    countQuery.where('priority', '=', 'low').executeTakeFirstOrThrow(),
+    countQuery.where('priority', '=', 'medium').executeTakeFirstOrThrow(),
+    countQuery.where('priority', '=', 'high').executeTakeFirstOrThrow(),
+    db
+      .selectFrom('replies')
+      .innerJoin('tickets', 'tickets.id', 'replies.ticket_id')
+      .select(['tickets.created_at', 'replies.ticket_id'])
+      .select(db.fn.min<Date>('replies.created_at').as('first_reply_at'))
+      .where('replies.author_type', '=', 'agent')
+      .groupBy(['replies.ticket_id', 'tickets.created_at'])
+      .execute(),
+  ]);
+
+  let avgSeconds: number | null = null;
+  if (responseTimes.length > 0) {
+    const totalSeconds = responseTimes.reduce((sum, row) => {
+      const replyMs = new Date(row.first_reply_at).getTime();
+      const ticketMs = new Date(row.created_at).getTime();
+      return sum + (replyMs - ticketMs) / 1000;
+    }, 0);
+    avgSeconds = totalSeconds / responseTimes.length;
+  }
+
+  return {
+    total: Number(totalResult.count),
+    open: Number(openResult.count),
+    closed: Number(closedResult.count),
+    byPriority: {
+      low: Number(lowResult.count),
+      medium: Number(mediumResult.count),
+      high: Number(highResult.count),
+    },
+    avgResponseTime: formatResponseTime(avgSeconds),
+  };
 }
