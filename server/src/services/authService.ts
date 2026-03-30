@@ -14,7 +14,7 @@ function generateToken(payload: JwtPayload): string {
   });
 }
 
-function toUser(row: {
+export function toUser(row: {
   id: string;
   email: string;
   name: string;
