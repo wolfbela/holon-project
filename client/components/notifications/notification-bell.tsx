@@ -14,7 +14,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNotifications } from '@/hooks/use-notifications';
 import { NotificationItem } from './notification-item';
 
-export function NotificationBell() {
+interface NotificationBellProps {
+  ticketBasePath?: string;
+}
+
+export function NotificationBell({
+  ticketBasePath = '/my-tickets',
+}: NotificationBellProps) {
   const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } =
     useNotifications();
 
@@ -79,6 +85,7 @@ export function NotificationBell() {
                 key={notification.id}
                 notification={notification}
                 onMarkAsRead={markAsRead}
+                ticketBasePath={ticketBasePath}
               />
             ))
           )}

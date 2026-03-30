@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { NavLinks } from './nav-links';
-import { NotificationBell } from './notification-bell';
-import { UserMenu } from './user-menu';
+import { NotificationBell } from '@/components/notifications';
+import { UserMenu } from '@/components/user-menu';
 import { MobileMenu } from './mobile-menu';
 
 export function CustomerNavbar() {

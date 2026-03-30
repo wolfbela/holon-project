@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const ADMIN_ROUTES = ['/dashboard', '/tickets', '/team'];
-const CUSTOMER_ONLY_ROUTES = ['/my-tickets'];
+const CUSTOMER_ONLY_ROUTES = ['/my-tickets', '/products'];
 
 function decodeJwtPayload(token: string): { role?: string } | null {
   try {
