@@ -4,6 +4,7 @@ process.env.JWT_EXPIRES_IN = '7d';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/app';
+import { db } from '../src/db';
 import { formatResponseTime } from '../src/services/ticketService';
 
 // --- Mocks ---
@@ -14,23 +15,62 @@ jest.mock('../src/db', () => ({
     insertInto: jest.fn(),
     updateTable: jest.fn(),
     deleteFrom: jest.fn(),
-    fn: { countAll: jest.fn() },
+    fn: {
+      countAll: jest.fn(),
+      min: jest.fn(),
+    },
   },
 }));
 
-jest.mock('kysely', () => {
-  const actual = jest.requireActual('kysely');
-  return {
-    ...actual,
-    sql: jest.fn().mockReturnValue({
-      execute: jest.fn().mockResolvedValue({ rows: [] }),
-    }),
+// --- Typed references ---
+
+const mockedDb = db as unknown as {
+  selectFrom: jest.Mock;
+  insertInto: jest.Mock;
+  updateTable: jest.Mock;
+  deleteFrom: jest.Mock;
+  fn: { countAll: jest.Mock; min: jest.Mock };
+};
+
+// --- DB chain helpers ---
+
+let mockSelectExecuteTakeFirstOrThrow: jest.Mock;
+let mockSelectExecute: jest.Mock;
+
+function setupDbMocks() {
+  mockSelectExecuteTakeFirstOrThrow = jest.fn();
+  mockSelectExecute = jest.fn();
+
+  const mockCountAllAs = jest.fn().mockReturnValue('count_expression');
+  mockedDb.fn.countAll.mockReturnValue({ as: mockCountAllAs });
+
+  const mockMinAs = jest.fn().mockReturnValue('min_expression');
+  mockedDb.fn.min.mockReturnValue({ as: mockMinAs });
+
+  const selectChain: Record<string, jest.Mock> = {
+    select: jest.fn(),
+    selectAll: jest.fn(),
+    where: jest.fn(),
+    orderBy: jest.fn(),
+    offset: jest.fn(),
+    limit: jest.fn(),
+    innerJoin: jest.fn(),
+    groupBy: jest.fn(),
+    executeTakeFirst: jest.fn(),
+    executeTakeFirstOrThrow: mockSelectExecuteTakeFirstOrThrow,
+    execute: mockSelectExecute,
   };
-});
-
-import { sql } from 'kysely';
-
-const mockedSql = sql as unknown as jest.Mock;
+  for (const key of Object.keys(selectChain)) {
+    if (
+      key !== 'executeTakeFirst' &&
+      key !== 'executeTakeFirstOrThrow' &&
+      key !== 'execute'
+    ) {
+      selectChain[key].mockReturnValue(selectChain);
+    }
+  }
+  mockedDb.selectFrom.mockReturnValue(selectChain);
+}
 
 // --- Token helpers ---
 
@@ -68,14 +108,31 @@ const expiredToken = generateToken(
 // --- Mock helpers ---
 
 function setupStatsMock(
-  countsRow: Record<string, string>,
-  avgRow: { avg_seconds: string | null },
+  counts: {
+    total: string;
+    open: string;
+    closed: string;
+    low: string;
+    medium: string;
+    high: string;
+  },
+  responseTimes: Array<{ created_at: Date; first_reply_at: Date }>,
 ) {
-  const mockExecute = jest
-    .fn()
-    .mockResolvedValueOnce({ rows: [countsRow] })
-    .mockResolvedValueOnce({ rows: [avgRow] });
-  mockedSql.mockReturnValue({ execute: mockExecute });
+  mockSelectExecuteTakeFirstOrThrow
+    .mockResolvedValueOnce({ count: counts.total })
+    .mockResolvedValueOnce({ count: counts.open })
+    .mockResolvedValueOnce({ count: counts.closed })
+    .mockResolvedValueOnce({ count: counts.low })
+    .mockResolvedValueOnce({ count: counts.medium })
+    .mockResolvedValueOnce({ count: counts.high });
+
+  mockSelectExecute.mockResolvedValueOnce(
+    responseTimes.map((rt) => ({
+      ticket_id: 'some-id',
+      created_at: rt.created_at,
+      first_reply_at: rt.first_reply_at,
+    })),
+  );
 }
 
 const defaultCounts = {
@@ -87,6 +144,14 @@ const defaultCounts = {
   high: '10',
 };
 
+// 9000 seconds = 2h 30m
+const defaultResponseTimes = [
+  {
+    created_at: new Date('2026-01-01T10:00:00Z'),
+    first_reply_at: new Date('2026-01-01T12:30:00Z'),
+  },
+];
+
 // ===================================================================
 // Tests
 // ===================================================================
@@ -94,6 +159,7 @@ const defaultCounts = {
 describe('Ticket Stats', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    setupDbMocks();
   });
 
   // =================================================================
@@ -162,7 +228,7 @@ describe('Ticket Stats', () => {
     // ---------------------------------------------------------------
     describe('Happy path', () => {
       it('should return 200 with correct stats shape', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '9000' });
+        setupStatsMock(defaultCounts, defaultResponseTimes);
 
         const res = await request(app)
           .get('/api/tickets/stats')
@@ -179,7 +245,13 @@ describe('Ticket Stats', () => {
       });
 
       it('should return avgResponseTime in days format for large values', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '100000' });
+        // 100000 seconds = 1d 3h 46m
+        setupStatsMock(defaultCounts, [
+          {
+            created_at: new Date('2026-01-01T00:00:00Z'),
+            first_reply_at: new Date('2026-01-02T03:46:40Z'),
+          },
+        ]);
 
         const res = await request(app)
           .get('/api/tickets/stats')
@@ -190,7 +262,13 @@ describe('Ticket Stats', () => {
       });
 
       it('should return avgResponseTime in minutes format for small values', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '2700' });
+        // 2700 seconds = 45m
+        setupStatsMock(defaultCounts, [
+          {
+            created_at: new Date('2026-01-01T10:00:00Z'),
+            first_reply_at: new Date('2026-01-01T10:45:00Z'),
+          },
+        ]);
 
         const res = await request(app)
           .get('/api/tickets/stats')
@@ -200,14 +278,37 @@ describe('Ticket Stats', () => {
         expect(res.body.avgResponseTime).toBe('45m');
       });
 
-      it('should call sql twice (counts + avg response time)', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '9000' });
+      it('should average response times across multiple tickets', async () => {
+        // Ticket 1: 1800s (30m), Ticket 2: 5400s (90m) → avg 3600s = 1h 0m
+        setupStatsMock(defaultCounts, [
+          {
+            created_at: new Date('2026-01-01T10:00:00Z'),
+            first_reply_at: new Date('2026-01-01T10:30:00Z'),
+          },
+          {
+            created_at: new Date('2026-01-02T10:00:00Z'),
+            first_reply_at: new Date('2026-01-02T11:30:00Z'),
+          },
+        ]);
+
+        const res = await request(app)
+          .get('/api/tickets/stats')
+          .set('Authorization', `Bearer ${adminToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.avgResponseTime).toBe('1h 0m');
+      });
+
+      it('should call selectFrom for count and response time queries', async () => {
+        setupStatsMock(defaultCounts, defaultResponseTimes);
 
         await request(app)
           .get('/api/tickets/stats')
           .set('Authorization', `Bearer ${adminToken}`);
 
-        expect(mockedSql).toHaveBeenCalledTimes(2);
+        // 6 count queries (tickets) + 1 response time query (replies)
+        expect(mockedDb.selectFrom).toHaveBeenCalledWith('tickets');
+        expect(mockedDb.selectFrom).toHaveBeenCalledWith('replies');
       });
     });
 
@@ -291,7 +392,7 @@ describe('Ticket Stats', () => {
             medium: '0',
             high: '0',
           },
-          { avg_seconds: null },
+          [],
         );
 
         const res = await request(app)
@@ -318,7 +419,7 @@ describe('Ticket Stats', () => {
             medium: '3',
             high: '1',
           },
-          { avg_seconds: null },
+          [],
         );
 
         const res = await request(app)
@@ -328,27 +429,6 @@ describe('Ticket Stats', () => {
         expect(res.status).toBe(200);
         expect(res.body.total).toBe(5);
         expect(res.body.avgResponseTime).toBe('0m');
-      });
-
-      it('should handle empty rows from counts query gracefully', async () => {
-        const mockExecute = jest
-          .fn()
-          .mockResolvedValueOnce({ rows: [] })
-          .mockResolvedValueOnce({ rows: [] });
-        mockedSql.mockReturnValue({ execute: mockExecute });
-
-        const res = await request(app)
-          .get('/api/tickets/stats')
-          .set('Authorization', `Bearer ${adminToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body).toEqual({
-          total: 0,
-          open: 0,
-          closed: 0,
-          byPriority: { low: 0, medium: 0, high: 0 },
-          avgResponseTime: '0m',
-        });
       });
 
       it('should handle very large ticket counts', async () => {
@@ -361,7 +441,12 @@ describe('Ticket Stats', () => {
             medium: '500000',
             high: '300000',
           },
-          { avg_seconds: '172800' },
+          [
+            {
+              created_at: new Date('2026-01-01T00:00:00Z'),
+              first_reply_at: new Date('2026-01-03T00:00:00Z'),
+            },
+          ],
         );
 
         const res = await request(app)
@@ -374,33 +459,10 @@ describe('Ticket Stats', () => {
         expect(res.body.avgResponseTime).toBe('2d 0h');
       });
 
-      it('should handle fractional avg_seconds from database', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '5432.789' });
-
-        const res = await request(app)
-          .get('/api/tickets/stats')
-          .set('Authorization', `Bearer ${adminToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.avgResponseTime).toBe('1h 30m');
-      });
-
-      it('should handle avg_seconds of "0" from database', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '0' });
-
-        const res = await request(app)
-          .get('/api/tickets/stats')
-          .set('Authorization', `Bearer ${adminToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.avgResponseTime).toBe('0m');
-      });
-
       it('should return 500 when database query fails', async () => {
-        const mockExecute = jest
-          .fn()
-          .mockRejectedValue(new Error('Connection refused'));
-        mockedSql.mockReturnValue({ execute: mockExecute });
+        mockSelectExecuteTakeFirstOrThrow.mockRejectedValue(
+          new Error('Connection refused'),
+        );
 
         const res = await request(app)
           .get('/api/tickets/stats')
@@ -419,7 +481,12 @@ describe('Ticket Stats', () => {
             medium: '1',
             high: '1',
           },
-          { avg_seconds: '600' },
+          [
+            {
+              created_at: new Date('2026-01-01T10:00:00Z'),
+              first_reply_at: new Date('2026-01-01T10:10:00Z'),
+            },
+          ],
         );
 
         const res = await request(app)
@@ -442,7 +509,12 @@ describe('Ticket Stats', () => {
             medium: '1',
             high: '0',
           },
-          { avg_seconds: '120' },
+          [
+            {
+              created_at: new Date('2026-01-01T10:00:00Z'),
+              first_reply_at: new Date('2026-01-01T10:02:00Z'),
+            },
+          ],
         );
 
         const res = await request(app)
@@ -453,6 +525,22 @@ describe('Ticket Stats', () => {
         expect(res.body.total).toBe(1);
         expect(res.body.avgResponseTime).toBe('2m');
       });
+
+      it('should return "0m" when response time is under 60 seconds', async () => {
+        setupStatsMock(defaultCounts, [
+          {
+            created_at: new Date('2026-01-01T10:00:00Z'),
+            first_reply_at: new Date('2026-01-01T10:00:30Z'),
+          },
+        ]);
+
+        const res = await request(app)
+          .get('/api/tickets/stats')
+          .set('Authorization', `Bearer ${adminToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.avgResponseTime).toBe('0m');
+      });
     });
 
     // ---------------------------------------------------------------
@@ -460,7 +548,7 @@ describe('Ticket Stats', () => {
     // ---------------------------------------------------------------
     describe('Query parameters', () => {
       it('should ignore unknown query parameters', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '9000' });
+        setupStatsMock(defaultCounts, defaultResponseTimes);
 
         const res = await request(app)
           .get('/api/tickets/stats?foo=bar&baz=123')
@@ -485,7 +573,7 @@ describe('Ticket Stats', () => {
       });
 
       it('should not be vulnerable via query parameters', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '9000' });
+        setupStatsMock(defaultCounts, defaultResponseTimes);
 
         const res = await request(app)
           .get("/api/tickets/stats?inject=' OR 1=1 --")
@@ -495,7 +583,7 @@ describe('Ticket Stats', () => {
       });
 
       it('should not be vulnerable to XSS via query parameters', async () => {
-        setupStatsMock(defaultCounts, { avg_seconds: '9000' });
+        setupStatsMock(defaultCounts, defaultResponseTimes);
 
         const res = await request(app)
           .get('/api/tickets/stats?xss=<script>alert(1)</script>')

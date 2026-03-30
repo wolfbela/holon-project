@@ -1,4 +1,3 @@
-import { sql } from 'kysely';
 import { db } from '../db';
 import {
   CreateTicketInput,
@@ -218,58 +217,53 @@ export function formatResponseTime(seconds: number | null): string {
 }
 
 export async function getTicketStats(): Promise<TicketStats> {
-  const [countsResult, avgResult] = await Promise.all([
-    sql<{
-      total: string;
-      open: string;
-      closed: string;
-      low: string;
-      medium: string;
-      high: string;
-    }>`
-      SELECT
-        COUNT(*)::text AS total,
-        COUNT(*) FILTER (WHERE status = 'open')::text AS open,
-        COUNT(*) FILTER (WHERE status = 'closed')::text AS closed,
-        COUNT(*) FILTER (WHERE priority = 'low')::text AS low,
-        COUNT(*) FILTER (WHERE priority = 'medium')::text AS medium,
-        COUNT(*) FILTER (WHERE priority = 'high')::text AS high
-      FROM tickets
-    `.execute(db),
+  const countQuery = db
+    .selectFrom('tickets')
+    .select(db.fn.countAll<string>().as('count'));
 
-    sql<{ avg_seconds: string | null }>`
-      SELECT AVG(EXTRACT(EPOCH FROM (first_reply.min_created - t.created_at)))::text AS avg_seconds
-      FROM tickets t
-      INNER JOIN (
-        SELECT ticket_id, MIN(created_at) AS min_created
-        FROM replies
-        WHERE author_type = 'agent'
-        GROUP BY ticket_id
-      ) first_reply ON first_reply.ticket_id = t.id
-    `.execute(db),
+  const [
+    totalResult,
+    openResult,
+    closedResult,
+    lowResult,
+    mediumResult,
+    highResult,
+    responseTimes,
+  ] = await Promise.all([
+    countQuery.executeTakeFirstOrThrow(),
+    countQuery.where('status', '=', 'open').executeTakeFirstOrThrow(),
+    countQuery.where('status', '=', 'closed').executeTakeFirstOrThrow(),
+    countQuery.where('priority', '=', 'low').executeTakeFirstOrThrow(),
+    countQuery.where('priority', '=', 'medium').executeTakeFirstOrThrow(),
+    countQuery.where('priority', '=', 'high').executeTakeFirstOrThrow(),
+    db
+      .selectFrom('replies')
+      .innerJoin('tickets', 'tickets.id', 'replies.ticket_id')
+      .select(['tickets.created_at', 'replies.ticket_id'])
+      .select(db.fn.min<Date>('replies.created_at').as('first_reply_at'))
+      .where('replies.author_type', '=', 'agent')
+      .groupBy(['replies.ticket_id', 'tickets.created_at'])
+      .execute(),
   ]);
 
-  const counts = countsResult.rows[0] ?? {
-    total: '0',
-    open: '0',
-    closed: '0',
-    low: '0',
-    medium: '0',
-    high: '0',
-  };
-
-  const avgSeconds = avgResult.rows[0]?.avg_seconds
-    ? parseFloat(avgResult.rows[0].avg_seconds)
-    : null;
+  let avgSeconds: number | null = null;
+  if (responseTimes.length > 0) {
+    const totalSeconds = responseTimes.reduce((sum, row) => {
+      const replyMs = new Date(row.first_reply_at).getTime();
+      const ticketMs = new Date(row.created_at).getTime();
+      return sum + (replyMs - ticketMs) / 1000;
+    }, 0);
+    avgSeconds = totalSeconds / responseTimes.length;
+  }
 
   return {
-    total: Number(counts.total),
-    open: Number(counts.open),
-    closed: Number(counts.closed),
+    total: Number(totalResult.count),
+    open: Number(openResult.count),
+    closed: Number(closedResult.count),
     byPriority: {
-      low: Number(counts.low),
-      medium: Number(counts.medium),
-      high: Number(counts.high),
+      low: Number(lowResult.count),
+      medium: Number(mediumResult.count),
+      high: Number(highResult.count),
     },
     avgResponseTime: formatResponseTime(avgSeconds),
   };
