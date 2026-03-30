@@ -27,21 +27,13 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useEffect, useState } from 'react';
+import { getInitials } from '@/lib/format';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-blue-500' },
   { href: '/tickets', label: 'Tickets', icon: Ticket, color: 'text-amber-500' },
   { href: '/team', label: 'Team', icon: Users, color: 'text-violet-500' },
 ] as const;
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 export function AdminSidebar() {
   const pathname = usePathname();
