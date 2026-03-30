@@ -6,7 +6,6 @@ import { useTheme } from 'next-themes';
 import {
   LayoutDashboard,
   Ticket,
-  Package,
   Users,
   LogOut,
   Moon,
@@ -32,7 +31,6 @@ import { useEffect, useState } from 'react';
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-blue-500' },
   { href: '/tickets', label: 'Tickets', icon: Ticket, color: 'text-amber-500' },
-  { href: '/products', label: 'Products', icon: Package, color: 'text-emerald-500' },
   { href: '/team', label: 'Team', icon: Users, color: 'text-violet-500' },
 ] as const;
 

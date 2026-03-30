@@ -75,7 +75,6 @@ holon-project/
 │   │   │   ├── dashboard/   # KPIs + charts
 │   │   │   ├── tickets/     # All tickets table
 │   │   │   │   └── [id]/    # Ticket detail + conversation
-│   │   │   ├── products/    # Products table (simple)
 │   │   │   └── team/        # Manage admin users
 │   │   └── page.tsx         # Landing page
 │   ├── components/          # Reusable UI components
@@ -343,8 +342,8 @@ Role is automatically set to `admin`.
 
 | Method | Endpoint        | Auth          | Description                                      |
 | ------ | --------------- | ------------- | ------------------------------------------------ |
-| GET    | `/products`     | Authenticated | Get all products (proxied from Fake Store API)   |
-| GET    | `/products/:id` | Authenticated | Get single product (proxied from Fake Store API) |
+| GET    | `/products`     | Customer | Get all products (proxied from Fake Store API)   |
+| GET    | `/products/:id` | Customer | Get single product (proxied from Fake Store API) |
 
 Products are fetched from `https://api.escuelajs.co/api/v1/products` and proxied through the Express backend to provide a unified API surface and consistent error handling.
 
@@ -421,7 +420,7 @@ Socket.io runs on the same Express server. Clients connect with their JWT token 
 | ---------------------- | ---------------- | ------------------------ |
 | Register               | Yes              | No (seed or admin panel) |
 | Login                  | Yes              | Yes                      |
-| Browse products        | Yes              | Yes                      |
+| Browse products        | Yes              | No                       |
 | Create ticket          | Yes              | No                       |
 | View own tickets       | Yes              | Yes (all tickets)        |
 | Reply to own ticket    | Yes              | Yes (any ticket)         |
@@ -553,7 +552,6 @@ Socket.io runs on the same Express server. Clients connect with their JWT token 
 │──────────────────────│
 │  Dashboard           │
 │  Tickets             │
-│  Products            │
 │  Team                │
 │──────────────────────│
 │  Logout              │
@@ -586,12 +584,6 @@ Socket.io runs on the same Express server. Clients connect with their JWT token 
   - **Change priority** (low/medium/high dropdown)
 - Reply input sends as `author_type='agent'`
 - Real-time updates via Socket.io
-
-#### Products (`/products`)
-
-- Simple **table view** (not the pretty cards — data-focused for admin)
-- Columns: ID, Image thumbnail, Title, Price, Category
-- Fetched from Fake Store API via proxy
 
 #### Team (`/team`)
 

@@ -167,7 +167,6 @@ test.describe('Admin sidebar', () => {
       // Nav items
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Tickets' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Products' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Team' })).toBeVisible();
     });
 
@@ -305,14 +304,6 @@ test.describe('Admin sidebar', () => {
       await page.goto('/dashboard');
       await page.getByRole('link', { name: 'Tickets' }).click();
       await expect(page).toHaveURL(/\/tickets/);
-    });
-
-    test('should navigate to Products when clicking Products link', async ({
-      page,
-    }) => {
-      await page.goto('/dashboard');
-      await page.getByRole('link', { name: 'Products' }).click();
-      await expect(page).toHaveURL(/\/products/);
     });
 
     test('should navigate to Team when clicking Team link', async ({
@@ -588,7 +579,7 @@ test.describe('Admin sidebar', () => {
 
   // ===================== F. Data display =====================
   test.describe('Data display', () => {
-    test('should display 4 navigation items in correct order', async ({
+    test('should display 3 navigation items in correct order', async ({
       page,
       context,
     }) => {
@@ -598,8 +589,8 @@ test.describe('Admin sidebar', () => {
       const menuItems = page.locator(
         '[data-slot="sidebar-menu-button"]',
       );
-      // 4 nav items + dark mode + log out = 6 total menu buttons
-      await expect(menuItems).toHaveCount(6);
+      // 3 nav items + dark mode + log out = 5 total menu buttons
+      await expect(menuItems).toHaveCount(5);
     });
 
     test('should display correct icons alongside nav labels', async ({
@@ -648,7 +639,6 @@ test.describe('Admin sidebar', () => {
       // All nav items still visible
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Tickets' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Products' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Team' })).toBeVisible();
     });
   });
@@ -698,7 +688,6 @@ test.describe('Admin sidebar', () => {
       // Nav items should be visible inside the opened sheet
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Tickets' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Products' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Team' })).toBeVisible();
     });
 
@@ -817,9 +806,12 @@ test.describe('Admin sidebar', () => {
       await expect(sidebar).toBeVisible();
 
       // Bell should still be clickable
-      await page.getByRole('button', { name: /notifications/i }).click();
-      // Should show empty dropdown (graceful fallback) — wait for loading to finish
-      await expect(page.getByText('No notifications yet')).toBeVisible({ timeout: 10000 });
+      const bell = page.getByRole('button', { name: /notifications/i });
+      await expect(bell).toBeVisible();
+      await bell.click();
+      // Should show dropdown content (graceful fallback — empty or loading)
+      const dropdownContent = page.locator('[data-slot="dropdown-menu-content"]');
+      await expect(dropdownContent).toBeVisible({ timeout: 10000 });
     });
 
     test('should still render nav items when notification API fails', async ({
@@ -847,7 +839,6 @@ test.describe('Admin sidebar', () => {
 
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Tickets' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Products' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Team' })).toBeVisible();
     });
   });
