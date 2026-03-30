@@ -27,17 +27,19 @@ function formatRelativeTime(dateString: string): string {
 interface NotificationItemProps {
   notification: Notification;
   onMarkAsRead: (id: string) => void;
+  ticketBasePath?: string;
 }
 
 export function NotificationItem({
   notification,
   onMarkAsRead,
+  ticketBasePath = '/my-tickets',
 }: NotificationItemProps) {
   const Icon = NOTIFICATION_ICONS[notification.type];
 
   return (
     <Link
-      href={`/my-tickets/${notification.ticket_id}`}
+      href={`${ticketBasePath}/${notification.ticket_id}`}
       onClick={() => {
         if (!notification.read) onMarkAsRead(notification.id);
       }}
@@ -51,7 +53,9 @@ export function NotificationItem({
         <p
           className={cn(
             'line-clamp-2 text-sm',
-            !notification.read ? 'font-medium text-foreground' : 'text-muted-foreground',
+            !notification.read
+              ? 'font-medium text-foreground'
+              : 'text-muted-foreground',
           )}
         >
           {notification.message}
