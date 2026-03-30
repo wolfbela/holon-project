@@ -366,9 +366,9 @@ test.describe('Product detail page', () => {
       await expect(
         page.getByRole('heading', { name: /create support ticket/i }),
       ).toBeVisible();
-      // Product name visible in modal description
+      // Product name visible in modal context
       await expect(
-        page.locator('[data-slot="dialog-description"]').getByText(mockProduct.title),
+        page.locator('[data-slot="dialog-content"]').getByText(mockProduct.title),
       ).toBeVisible();
     });
 
@@ -418,12 +418,25 @@ test.describe('Product detail page', () => {
         .getByRole('button', { name: /submit ticket/i })
         .click();
 
-      // Success toast should appear with ticket display_id
+      // Success state should appear inside modal with ticket display_id
       await expect(page.getByText(/TK-0042/)).toBeVisible();
+      await expect(page.getByText(/ticket created/i)).toBeVisible();
+
+      // Should offer View My Tickets action
+      await expect(
+        page.getByRole('button', { name: /view my tickets/i }),
+      ).toBeVisible();
+
+      // Close via Close button (not the X button)
+      await page
+        .locator('[data-slot="dialog-content"]')
+        .getByRole('button', { name: /^close$/i, exact: true })
+        .first()
+        .click();
 
       // Modal should close
       await expect(
-        page.getByRole('heading', { name: /create support ticket/i }),
+        page.locator('[data-slot="dialog-content"]'),
       ).not.toBeVisible();
     });
 
@@ -543,6 +556,28 @@ test.describe('Product detail page', () => {
 
       await expect(page.getByLabel('Subject')).toBeDisabled();
       await expect(page.getByLabel('Message')).toBeDisabled();
+    });
+
+    test('should navigate to my-tickets when clicking View My Tickets', async ({
+      page,
+      context,
+    }) => {
+      await setupAuthenticatedPage(page, context, { ticketSuccess: true });
+      await page.goto('/products/1');
+      await page.getByRole('button', { name: /create ticket/i }).click();
+
+      await page.getByLabel('Subject').fill('Test');
+      await page.getByLabel('Message').fill('Test message');
+
+      await page
+        .locator('[data-slot="dialog-content"]')
+        .getByRole('button', { name: /submit ticket/i })
+        .click();
+
+      await expect(page.getByText(/ticket created/i)).toBeVisible();
+
+      await page.getByRole('button', { name: /view my tickets/i }).click();
+      await expect(page).toHaveURL(/\/my-tickets/);
     });
   });
 
