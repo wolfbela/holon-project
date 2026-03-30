@@ -18,6 +18,16 @@ import {
   getTicketStats,
 } from '../services/ticketService';
 import { createReply, listReplies } from '../services/replyService';
+import {
+  createNotification,
+  createNotificationsForAdmins,
+} from '../services/notificationService';
+import {
+  emitTicketCreated,
+  emitTicketUpdated,
+  emitNewReply,
+  emitNewNotification,
+} from '../socket/emitters';
 
 const router = Router();
 
@@ -31,6 +41,21 @@ router.post(
         throw new AppError('Only customers can create tickets', 403);
       }
       const ticket = await createTicket(req.body, req.user!);
+
+      try {
+        const notifications = await createNotificationsForAdmins({
+          type: 'new_ticket',
+          ticketId: ticket.id,
+          message: `New ticket created: ${ticket.display_id} - ${ticket.subject}`,
+        });
+        emitTicketCreated(ticket);
+        for (const n of notifications) {
+          emitNewNotification(n.user_id, n);
+        }
+      } catch (err) {
+        console.error('Error emitting ticket_created events:', err);
+      }
+
       res.status(201).json(ticket);
     } catch (err) {
       next(err);
@@ -93,6 +118,22 @@ router.put(
         req.body,
         req.user!,
       );
+
+      try {
+        emitTicketUpdated(ticket);
+        if (req.body.status === 'closed') {
+          const notification = await createNotification({
+            userId: ticket.user_id,
+            type: 'ticket_closed',
+            ticketId: ticket.id,
+            message: `Your ticket ${ticket.display_id} has been closed`,
+          });
+          emitNewNotification(ticket.user_id, notification);
+        }
+      } catch (err) {
+        console.error('Error emitting ticket_updated events:', err);
+      }
+
       res.json(ticket);
     } catch (err) {
       next(err);
@@ -125,6 +166,37 @@ router.post(
         req.body,
         req.user!,
       );
+
+      try {
+        const ticketId = req.params.id as string;
+        emitNewReply(ticketId, reply);
+
+        if (req.user!.role === 'admin') {
+          // Agent replied → notify the ticket owner
+          const ticket = await getTicket(ticketId, req.user!);
+          const notification = await createNotification({
+            userId: ticket.user_id,
+            type: 'new_reply',
+            ticketId: ticket.id,
+            message: `New reply on ticket ${ticket.display_id}`,
+          });
+          emitNewNotification(ticket.user_id, notification);
+        } else {
+          // Customer replied → notify all admins
+          const ticket = await getTicket(ticketId, req.user!);
+          const notifications = await createNotificationsForAdmins({
+            type: 'new_reply',
+            ticketId: ticket.id,
+            message: `New reply on ticket ${ticket.display_id} from ${ticket.name}`,
+          });
+          for (const n of notifications) {
+            emitNewNotification(n.user_id, n);
+          }
+        }
+      } catch (err) {
+        console.error('Error emitting new_reply events:', err);
+      }
+
       res.status(201).json(reply);
     } catch (err) {
       next(err);

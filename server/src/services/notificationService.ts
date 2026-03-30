@@ -77,3 +77,52 @@ export async function markAllAsRead(user: JwtPayload): Promise<void> {
     .where('read', '=', false)
     .execute();
 }
+
+export async function createNotification(input: {
+  userId: string;
+  type: NotificationType;
+  ticketId: string;
+  message: string;
+}): Promise<Notification> {
+  const row = await db
+    .insertInto('notifications')
+    .values({
+      user_id: input.userId,
+      type: input.type,
+      ticket_id: input.ticketId,
+      message: input.message,
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return toNotification(row);
+}
+
+export async function createNotificationsForAdmins(input: {
+  type: NotificationType;
+  ticketId: string;
+  message: string;
+}): Promise<Notification[]> {
+  const admins = await db
+    .selectFrom('users')
+    .select('id')
+    .where('role', '=', 'admin')
+    .execute();
+
+  if (admins.length === 0) return [];
+
+  const rows = await db
+    .insertInto('notifications')
+    .values(
+      admins.map((admin) => ({
+        user_id: admin.id,
+        type: input.type,
+        ticket_id: input.ticketId,
+        message: input.message,
+      })),
+    )
+    .returningAll()
+    .execute();
+
+  return rows.map(toNotification);
+}
