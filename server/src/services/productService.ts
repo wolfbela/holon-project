@@ -36,7 +36,7 @@ export async function fetchProductById(id: number): Promise<Product> {
   }
 
   if (!response.ok) {
-    if (response.status === 404) {
+    if (response.status === 404 || response.status === 400) {
       throw new AppError('Product not found', 404);
     }
     throw new AppError('External API error', 502);
