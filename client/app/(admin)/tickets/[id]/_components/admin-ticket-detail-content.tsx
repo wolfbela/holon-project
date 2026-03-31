@@ -11,12 +11,15 @@ import {
   TicketDetailSkeleton,
   TicketDetailError,
 } from '@/components/ticket-detail';
+import { AdminTicketActions } from './admin-ticket-actions';
 
-interface TicketDetailContentProps {
+interface AdminTicketDetailContentProps {
   id: string;
 }
 
-export function TicketDetailContent({ id }: TicketDetailContentProps) {
+export function AdminTicketDetailContent({
+  id,
+}: AdminTicketDetailContentProps) {
   const {
     ticket,
     isLoading: ticketLoading,
@@ -52,15 +55,17 @@ export function TicketDetailContent({ id }: TicketDetailContentProps) {
         <TicketHeader
           ticket={ticket}
           product={productId ? product : null}
-          backHref="/my-tickets"
-          backLabel="Back to My Tickets"
+          backHref="/tickets"
+          backLabel="Back to Tickets"
+          actions={<AdminTicketActions ticket={ticket} />}
+          showCustomerInfo
         />
 
         <ConversationThread
           replies={replies}
           ticketAuthorName={ticket.name}
           isLoading={repliesLoading}
-          viewerRole="customer"
+          viewerRole="agent"
         />
 
         <ReplyInput

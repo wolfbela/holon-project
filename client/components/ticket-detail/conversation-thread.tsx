@@ -13,12 +13,14 @@ interface ConversationThreadProps {
   replies: Reply[];
   ticketAuthorName: string;
   isLoading: boolean;
+  viewerRole: 'customer' | 'agent';
 }
 
 export function ConversationThread({
   replies,
   ticketAuthorName,
   isLoading,
+  viewerRole,
 }: ConversationThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -59,8 +61,15 @@ export function ConversationThread({
           aria-label="Conversation messages"
         >
           {replies.map((reply, index) => {
-            const isCustomer = reply.author_type === 'customer';
-            const authorName = isCustomer ? ticketAuthorName : 'Support Agent';
+            const isSelf =
+              viewerRole === 'customer'
+                ? reply.author_type === 'customer'
+                : reply.author_type === 'agent';
+            const displayName = isSelf
+              ? 'You'
+              : reply.author_type === 'customer'
+                ? ticketAuthorName
+                : 'Support Agent';
 
             return (
               <motion.div
@@ -72,12 +81,16 @@ export function ConversationThread({
                   delay: Math.min(index * 0.05, 0.5),
                   ease: 'easeOut',
                 }}
-                className={cn('flex gap-2.5', isCustomer ? 'justify-end' : 'justify-start')}
+                className={cn('flex gap-2.5', isSelf ? 'justify-end' : 'justify-start')}
               >
-                {!isCustomer && (
+                {!isSelf && (
                   <Avatar className="mt-5 shrink-0">
                     <AvatarFallback>
-                      <Headset className="size-3.5" />
+                      {reply.author_type === 'agent' ? (
+                        <Headset className="size-3.5" />
+                      ) : (
+                        getInitials(ticketAuthorName)
+                      )}
                     </AvatarFallback>
                   </Avatar>
                 )}
@@ -85,22 +98,22 @@ export function ConversationThread({
                 <div
                   className={cn(
                     'max-w-[80%] space-y-1',
-                    isCustomer ? 'items-end' : 'items-start',
+                    isSelf ? 'items-end' : 'items-start',
                   )}
                 >
                   <p
                     className={cn(
                       'text-xs font-medium text-muted-foreground',
-                      isCustomer && 'text-right',
+                      isSelf && 'text-right',
                     )}
                   >
-                    {isCustomer ? 'You' : authorName}
+                    {displayName}
                   </p>
 
                   <div
                     className={cn(
                       'rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed',
-                      isCustomer
+                      isSelf
                         ? 'rounded-br-md bg-primary text-primary-foreground'
                         : 'rounded-bl-md bg-muted text-foreground',
                     )}
@@ -113,17 +126,21 @@ export function ConversationThread({
                   <p
                     className={cn(
                       'text-[11px] text-muted-foreground',
-                      isCustomer && 'text-right',
+                      isSelf && 'text-right',
                     )}
                   >
                     {formatRelativeTime(reply.created_at)}
                   </p>
                 </div>
 
-                {isCustomer && (
+                {isSelf && (
                   <Avatar className="mt-5 shrink-0">
                     <AvatarFallback>
-                      {getInitials(ticketAuthorName)}
+                      {viewerRole === 'customer' ? (
+                        getInitials(ticketAuthorName)
+                      ) : (
+                        <Headset className="size-3.5" />
+                      )}
                     </AvatarFallback>
                   </Avatar>
                 )}
