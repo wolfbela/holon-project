@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Ticket, TicketStatus, TicketPriority } from '@shared/types/ticket';
+import { useState, useEffect, useCallback } from 'react';
+import type {
+  Ticket,
+  TicketStatus,
+  TicketPriority,
+} from '@shared/types/ticket';
 import type { PaginatedResponse, PaginationMeta } from '@shared/types/api';
 import { apiClient, ApiClientError } from '@/lib/api-client';
 import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
+import { useFetch } from './use-fetch';
 
 export type SortField = 'created_at' | 'updated_at' | 'priority' | 'status';
 export type SortOrder = 'asc' | 'desc';
@@ -29,14 +34,9 @@ export function useAdminTickets({
   page = 1,
   limit = 10,
 }: UseAdminTicketsParams = {}) {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const fetchedRef = useRef(false);
 
-  const buildQuery = useCallback(() => {
+  const fetcher = useCallback(() => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (status) params.set('status', status);
@@ -45,71 +45,53 @@ export function useAdminTickets({
     params.set('order', order);
     params.set('page', String(page));
     params.set('limit', String(limit));
-    return params.toString();
+    return apiClient.get<PaginatedResponse<Ticket>>(
+      `/tickets?${params.toString()}`,
+    );
   }, [search, status, priority, sort, order, page, limit]);
 
-  const fetchTickets = useCallback(async () => {
-    setIsLoading(true);
-    setHasError(false);
-    try {
-      const result = await apiClient.get<PaginatedResponse<Ticket>>(
-        `/tickets?${buildQuery()}`,
-      );
-      setTickets(result.data);
-      setPagination(result.pagination);
-    } catch (error) {
-      setHasError(true);
-      if (error instanceof ApiClientError) {
-        toast.error(error.body.error);
-      } else {
-        toast.error('Failed to load tickets. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [buildQuery]);
+  const { data, isLoading, hasError, retry, setData } = useFetch({
+    fetcher,
+    deps: [search, status, priority, sort, order, page, limit],
+    errorMessage: 'Failed to load tickets. Please try again.',
+  });
 
-  useEffect(() => {
-    fetchedRef.current = false;
-  }, [search, status, priority, sort, order, page, limit]);
-
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchTickets();
-  }, [fetchTickets]);
+  const tickets: Ticket[] = data?.data ?? [];
+  const pagination: PaginationMeta | null = data?.pagination ?? null;
 
   // Real-time: refetch when a new ticket is created
   useEffect(() => {
     const socket = getSocket();
 
     const handleTicketCreated = () => {
-      fetchedRef.current = false;
-      fetchTickets();
+      retry();
     };
 
     socket.on('ticket_created', handleTicketCreated);
     return () => {
       socket.off('ticket_created', handleTicketCreated);
     };
-  }, [fetchTickets]);
+  }, [retry]);
 
   const deleteTicket = useCallback(
     async (ticketId: string) => {
       setIsDeleting(true);
       try {
         await apiClient.del(`/tickets/${ticketId}`);
-        // If this was the last ticket on the page, refetch to handle pagination
         if (tickets.length <= 1 && page > 1) {
-          fetchedRef.current = false;
-          // The parent will update the page via URL state
+          retry();
         } else {
-          setTickets((prev) => prev.filter((t) => t.id !== ticketId));
-          if (pagination) {
-            setPagination((prev) =>
-              prev ? { ...prev, total: prev.total - 1 } : prev,
-            );
-          }
+          setData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              data: prev.data.filter((t) => t.id !== ticketId),
+              pagination: {
+                ...prev.pagination,
+                total: prev.pagination.total - 1,
+              },
+            };
+          });
         }
         toast.success('Ticket deleted successfully.');
       } catch (error) {
@@ -122,13 +104,16 @@ export function useAdminTickets({
         setIsDeleting(false);
       }
     },
-    [tickets.length, page, pagination],
+    [tickets.length, page, retry, setData],
   );
 
-  const retry = useCallback(() => {
-    fetchedRef.current = false;
-    fetchTickets();
-  }, [fetchTickets]);
-
-  return { tickets, pagination, isLoading, hasError, retry, deleteTicket, isDeleting };
+  return {
+    tickets,
+    pagination,
+    isLoading,
+    hasError,
+    retry,
+    deleteTicket,
+    isDeleting,
+  };
 }

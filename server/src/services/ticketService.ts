@@ -8,6 +8,7 @@ import {
   TicketStats,
 } from '@holon/shared';
 import { AppError } from '../utils/AppError';
+import { assertCanAccessTicket } from '../utils/accessControl';
 import { JwtPayload } from '../middleware/auth';
 
 function escapeIlike(str: string): string {
@@ -144,9 +145,7 @@ export async function getTicket(
     throw new AppError('Ticket not found', 404);
   }
 
-  if (user.role !== 'admin' && row.user_id !== user.userId) {
-    throw new AppError('Forbidden', 403);
-  }
+  assertCanAccessTicket(user, row.user_id);
 
   return toTicket(row);
 }
@@ -170,9 +169,7 @@ export async function updateTicket(
     throw new AppError('Ticket not found', 404);
   }
 
-  if (user.role !== 'admin' && existing.user_id !== user.userId) {
-    throw new AppError('Forbidden', 403);
-  }
+  assertCanAccessTicket(user, existing.user_id);
 
   if (user.role !== 'admin' && (input.status || input.priority)) {
     throw new AppError('Only admins can change status or priority', 403);

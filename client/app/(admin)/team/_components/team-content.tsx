@@ -2,21 +2,19 @@
 
 import { useCallback, useState } from 'react';
 import { motion } from 'motion/react';
-import { RefreshCw, Users, UserPlus } from 'lucide-react';
+import { Users, UserPlus } from 'lucide-react';
 import type { User, RegisterInput } from '@shared/types/user';
 import { useAdminUsers } from '@/hooks/use-admin-users';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorRetry } from '@/components/error-retry';
 import { TeamTable } from './team-table';
 import { TeamCard } from './team-card';
-import {
-  TeamTableSkeleton,
-  TeamCardSkeleton,
-} from './team-table-skeleton';
+import { TeamTableSkeleton, TeamCardSkeleton } from './team-table-skeleton';
 import { AddAdminDialog } from './add-admin-dialog';
-import { DeleteAdminDialog } from './delete-admin-dialog';
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 
 export function TeamContent() {
   const { user } = useAuth();
@@ -79,27 +77,7 @@ export function TeamContent() {
       {/* Content */}
       <div className="mt-6">
         {hasError && !isLoading ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-20 text-center"
-          >
-            <p className="text-lg font-medium text-foreground">
-              Something went wrong
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Could not load team members.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4 gap-2 rounded-full"
-              onClick={retry}
-            >
-              <RefreshCw className="size-3.5" />
-              Try again
-            </Button>
-          </motion.div>
+          <ErrorRetry message="Could not load team members." onRetry={retry} />
         ) : isLoading ? (
           isMobile ? (
             <TeamCardSkeleton />
@@ -153,14 +131,25 @@ export function TeamContent() {
         onSubmit={handleCreateUser}
         isCreating={isCreating}
       />
-      <DeleteAdminDialog
-        admin={deleteTarget}
+      <ConfirmDeleteDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
+        title="Remove admin?"
+        description={
+          <>
+            This will permanently remove{' '}
+            <span className="font-semibold text-foreground">
+              {deleteTarget?.name}
+            </span>{' '}
+            ({deleteTarget?.email}) from the admin team. This action cannot be
+            undone.
+          </>
+        }
+        confirmLabel="Remove"
       />
     </div>
   );

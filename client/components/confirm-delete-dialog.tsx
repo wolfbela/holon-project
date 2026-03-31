@@ -1,7 +1,6 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import type { Ticket } from '@shared/types/ticket';
 import {
   Dialog,
   DialogContent,
@@ -12,34 +11,31 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-interface DeleteTicketDialogProps {
-  ticket: Ticket | null;
+interface ConfirmDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   isDeleting: boolean;
+  title: string;
+  description: React.ReactNode;
+  confirmLabel?: string;
 }
 
-export function DeleteTicketDialog({
-  ticket,
+export function ConfirmDeleteDialog({
   open,
   onOpenChange,
   onConfirm,
   isDeleting,
-}: DeleteTicketDialogProps) {
+  title,
+  description,
+  confirmLabel = 'Delete',
+}: ConfirmDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete ticket?</DialogTitle>
-          <DialogDescription>
-            This will permanently delete ticket{' '}
-            <span className="font-semibold text-foreground">
-              {ticket?.display_id}
-            </span>{' '}
-            &mdash; &ldquo;{ticket?.subject}&rdquo;. This action cannot be
-            undone.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -55,7 +51,7 @@ export function DeleteTicketDialog({
             disabled={isDeleting}
           >
             {isDeleting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Delete
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

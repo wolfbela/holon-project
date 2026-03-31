@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { Ticket, TicketStatus } from '@shared/types/ticket';
 import type { PaginatedResponse, PaginationMeta } from '@shared/types/api';
-import { apiClient, ApiClientError } from '@/lib/api-client';
-import { toast } from 'sonner';
+import { apiClient } from '@/lib/api-client';
+import { useFetch } from './use-fetch';
 
 interface UseTicketsParams {
   status?: TicketStatus;
@@ -17,58 +17,26 @@ export function useTickets({
   page = 1,
   limit = 10,
 }: UseTicketsParams = {}) {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const fetchedRef = useRef(false);
-
-  const buildQuery = useCallback(() => {
+  const fetcher = useCallback(() => {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     params.set('page', String(page));
     params.set('limit', String(limit));
     params.set('sort', 'created_at');
     params.set('order', 'desc');
-    return params.toString();
+    return apiClient.get<PaginatedResponse<Ticket>>(
+      `/tickets?${params.toString()}`,
+    );
   }, [status, page, limit]);
 
-  const fetchTickets = useCallback(async () => {
-    setIsLoading(true);
-    setHasError(false);
-    try {
-      const result = await apiClient.get<PaginatedResponse<Ticket>>(
-        `/tickets?${buildQuery()}`,
-      );
-      setTickets(result.data);
-      setPagination(result.pagination);
-    } catch (error) {
-      setHasError(true);
-      if (error instanceof ApiClientError) {
-        toast.error(error.body.error);
-      } else {
-        toast.error('Failed to load tickets. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [buildQuery]);
+  const { data, isLoading, hasError, retry } = useFetch({
+    fetcher,
+    deps: [status, page, limit],
+    errorMessage: 'Failed to load tickets. Please try again.',
+  });
 
-  // Reset fetch guard when params change
-  useEffect(() => {
-    fetchedRef.current = false;
-  }, [status, page, limit]);
-
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchTickets();
-  }, [fetchTickets]);
-
-  const retry = useCallback(() => {
-    fetchedRef.current = false;
-    fetchTickets();
-  }, [fetchTickets]);
+  const tickets: Ticket[] = data?.data ?? [];
+  const pagination: PaginationMeta | null = data?.pagination ?? null;
 
   return { tickets, pagination, isLoading, hasError, retry };
 }

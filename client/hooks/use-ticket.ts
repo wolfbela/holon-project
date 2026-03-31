@@ -1,47 +1,30 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { Ticket } from '@shared/types/ticket';
-import { apiClient, ApiClientError } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 import { getSocket } from '@/lib/socket';
-import { toast } from 'sonner';
+import { useFetch } from './use-fetch';
 
 export function useTicket(id: string) {
-  const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const [errorStatus, setErrorStatus] = useState<number | null>(null);
-  const fetchedRef = useRef(false);
+  const fetcher = useCallback(
+    () => apiClient.get<Ticket>(`/tickets/${id}`),
+    [id],
+  );
 
-  const fetchTicket = useCallback(async () => {
-    setIsLoading(true);
-    setHasError(false);
-    setErrorStatus(null);
-    try {
-      const data = await apiClient.get<Ticket>(`/tickets/${id}`);
-      setTicket(data);
-    } catch (error) {
-      setHasError(true);
-      if (error instanceof ApiClientError) {
-        setErrorStatus(error.status);
-        toast.error(error.body.error);
-      } else {
-        toast.error('Failed to load ticket. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    fetchedRef.current = false;
-  }, [id]);
-
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchTicket();
-  }, [fetchTicket]);
+  const {
+    data: ticket,
+    isLoading,
+    hasError,
+    errorStatus,
+    retry,
+    setData: setTicket,
+  } = useFetch({
+    fetcher,
+    deps: [id],
+    errorMessage: 'Failed to load ticket. Please try again.',
+    trackErrorStatus: true,
+  });
 
   useEffect(() => {
     const socket = getSocket();
@@ -57,12 +40,7 @@ export function useTicket(id: string) {
     return () => {
       socket.off('ticket_updated', handleTicketUpdated);
     };
-  }, [id]);
+  }, [id, setTicket]);
 
-  const retry = useCallback(() => {
-    fetchedRef.current = false;
-    fetchTicket();
-  }, [fetchTicket]);
-
-  return { ticket, isLoading, hasError, errorStatus, retry };
+  return { ticket: ticket ?? null, isLoading, hasError, errorStatus, retry };
 }

@@ -3,8 +3,7 @@ import { db } from '../db';
 import { RegisterInput, User } from '@holon/shared';
 import { AppError } from '../utils/AppError';
 import { toUser } from './authService';
-
-const SALT_ROUNDS = 10;
+import { SALT_ROUNDS } from '../config';
 
 export async function listAdminUsers(): Promise<User[]> {
   const rows = await db

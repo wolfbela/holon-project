@@ -1,60 +1,47 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import type { TicketStats, PaginatedResponse } from '@shared/types/api';
 import type { Ticket } from '@shared/types/ticket';
-import { apiClient, ApiClientError } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
+import { useFetch } from './use-fetch';
+
+interface DashboardData {
+  stats: TicketStats;
+  recentTickets: Ticket[];
+}
 
 export function useDashboardStats() {
-  const [stats, setStats] = useState<TicketStats | null>(null);
-  const [recentTickets, setRecentTickets] = useState<Ticket[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const fetchedRef = useRef(false);
-
-  const fetchDashboard = useCallback(async () => {
-    setIsLoading(true);
-    setHasError(false);
-    try {
-      const [statsResult, ticketsResult] = await Promise.all([
-        apiClient.get<TicketStats>('/tickets/stats'),
-        apiClient.get<PaginatedResponse<Ticket>>(
-          '/tickets?page=1&limit=5&sort=created_at&order=desc',
-        ),
-      ]);
-      setStats(statsResult);
-      setRecentTickets(ticketsResult.data);
-    } catch (error) {
-      setHasError(true);
-      if (error instanceof ApiClientError) {
-        toast.error(error.body.error);
-      } else {
-        toast.error('Failed to load dashboard data. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  const fetcher = useCallback(async (): Promise<DashboardData> => {
+    const [stats, ticketsResult] = await Promise.all([
+      apiClient.get<TicketStats>('/tickets/stats'),
+      apiClient.get<PaginatedResponse<Ticket>>(
+        '/tickets?page=1&limit=5&sort=created_at&order=desc',
+      ),
+    ]);
+    return { stats, recentTickets: ticketsResult.data };
   }, []);
 
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchDashboard();
-  }, [fetchDashboard]);
+  const { data, isLoading, hasError, retry } = useFetch({
+    fetcher,
+    errorMessage: 'Failed to load dashboard data. Please try again.',
+  });
 
   // Real-time: refetch when a new ticket is created or on reconnect
   useEffect(() => {
     const socket = getSocket();
 
-    const handleTicketCreated = (data: { ticket: Ticket }) => {
-      toast.info(`New ticket: ${data.ticket.subject}`, { duration: 3000 });
-      fetchDashboard();
+    const handleTicketCreated = (socketData: { ticket: Ticket }) => {
+      toast.info(`New ticket: ${socketData.ticket.subject}`, {
+        duration: 3000,
+      });
+      retry();
     };
 
     const handleReconnect = () => {
-      fetchDashboard();
+      retry();
     };
 
     socket.on('ticket_created', handleTicketCreated);
@@ -64,12 +51,13 @@ export function useDashboardStats() {
       socket.off('ticket_created', handleTicketCreated);
       socket.off('connect', handleReconnect);
     };
-  }, [fetchDashboard]);
+  }, [retry]);
 
-  const retry = useCallback(() => {
-    fetchedRef.current = false;
-    fetchDashboard();
-  }, [fetchDashboard]);
-
-  return { stats, recentTickets, isLoading, hasError, retry };
+  return {
+    stats: data?.stats ?? null,
+    recentTickets: data?.recentTickets ?? [],
+    isLoading,
+    hasError,
+    retry,
+  };
 }

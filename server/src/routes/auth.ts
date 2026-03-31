@@ -1,7 +1,8 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { RegisterSchema, LoginSchema } from '@holon/shared';
 import { validate } from '../middleware/validate';
 import { requireAuth } from '../middleware/auth';
+import { asyncHandler } from '../utils/asyncHandler';
 import {
   registerUser,
   loginUser,
@@ -13,40 +14,28 @@ const router = Router();
 router.post(
   '/register',
   validate(RegisterSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await registerUser(req.body);
-      res.status(201).json(result);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await registerUser(req.body);
+    res.status(201).json(result);
+  }),
 );
 
 router.post(
   '/login',
   validate(LoginSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await loginUser(req.body);
-      res.json(result);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await loginUser(req.body);
+    res.json(result);
+  }),
 );
 
 router.get(
   '/me',
   requireAuth(),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const user = await getCurrentUser(req.user!.userId);
-      res.json({ user });
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req: Request, res: Response) => {
+    const user = await getCurrentUser(req.user!.userId);
+    res.json({ user });
+  }),
 );
 
 export default router;

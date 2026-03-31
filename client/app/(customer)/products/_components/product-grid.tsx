@@ -3,7 +3,9 @@
 import type { Product } from '@shared/types/product';
 import { ProductCard } from './product-card';
 import { ProductCardSkeleton } from './product-card-skeleton';
-import { EmptyState } from './empty-state';
+import { Package } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/empty-state';
 
 interface ProductGridProps {
   products: Product[];
@@ -32,7 +34,25 @@ export function ProductGrid({
   }
 
   if (products.length === 0) {
-    return <EmptyState onReset={onResetFilters} />;
+    return (
+      <EmptyState
+        icon={Package}
+        title="No products found"
+        description="Try adjusting your filters to find what you're looking for."
+        action={
+          onResetFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={onResetFilters}
+            >
+              Clear filters
+            </Button>
+          )
+        }
+      />
+    );
   }
 
   return (

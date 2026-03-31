@@ -2,8 +2,8 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ErrorRetry } from '@/components/error-retry';
 import { useProducts } from '@/hooks/use-products';
 import { CategoryFilter } from './_components/category-filter';
 import { ProductGrid } from './_components/product-grid';
@@ -65,27 +65,10 @@ export default function ProductsPage() {
       )}
 
       {hasError && !isLoading ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
-        >
-          <p className="text-lg font-medium text-foreground">
-            Something went wrong
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            We couldn&apos;t load the products. Please try again.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4 gap-2 rounded-full"
-            onClick={retry}
-          >
-            <RefreshCw className="size-3.5" />
-            Try again
-          </Button>
-        </motion.div>
+        <ErrorRetry
+          message="We couldn't load the products. Please try again."
+          onRetry={retry}
+        />
       ) : (
         <div className="mt-6">
           <ProductGrid
