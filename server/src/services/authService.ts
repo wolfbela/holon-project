@@ -4,8 +4,7 @@ import { db } from '../db';
 import { RegisterInput, LoginInput, User, AuthResponse } from '@holon/shared';
 import { AppError } from '../utils/AppError';
 import { JwtPayload } from '../middleware/auth';
-
-const SALT_ROUNDS = 10;
+import { SALT_ROUNDS } from '../config';
 
 function generateToken(payload: JwtPayload): string {
   const expiresIn = process.env.JWT_EXPIRES_IN || '7d';

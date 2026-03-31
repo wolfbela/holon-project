@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import type { Notification } from '@shared/types/notification';
 import { apiClient } from '@/lib/api-client';
 import { getSocket } from '@/lib/socket';
+import { useFetch } from './use-fetch';
 
 interface NotificationsResponse {
   data: Notification[];
@@ -11,39 +12,33 @@ interface NotificationsResponse {
 }
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const fetchedRef = useRef(false);
+  const fetcher = useCallback(
+    () => apiClient.get<NotificationsResponse>('/notifications'),
+    [],
+  );
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await apiClient.get<NotificationsResponse>('/notifications');
-      setNotifications(res.data);
-      setUnreadCount(res.unreadCount);
-    } catch {
-      // Silently fail — notifications are non-critical
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const { data, isLoading, retry, setData } = useFetch({
+    fetcher,
+    errorMessage: null, // Silently fail — notifications are non-critical
+  });
 
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchNotifications();
-  }, [fetchNotifications]);
+  const notifications: Notification[] = data?.data ?? [];
+  const unreadCount: number = data?.unreadCount ?? 0;
 
   useEffect(() => {
     const socket = getSocket();
 
-    const handleNewNotification = (data: { notification: Notification }) => {
-      setNotifications((prev) => [data.notification, ...prev]);
-      setUnreadCount((prev) => prev + 1);
+    const handleNewNotification = (socketData: {
+      notification: Notification;
+    }) => {
+      setData((prev: NotificationsResponse | undefined) => ({
+        data: [socketData.notification, ...(prev?.data ?? [])],
+        unreadCount: (prev?.unreadCount ?? 0) + 1,
+      }));
     };
 
     const handleReconnect = () => {
-      fetchNotifications();
+      retry();
     };
 
     socket.on('new_notification', handleNewNotification);
@@ -53,40 +48,47 @@ export function useNotifications() {
       socket.off('new_notification', handleNewNotification);
       socket.off('connect', handleReconnect);
     };
-  }, [fetchNotifications]);
+  }, [retry, setData]);
 
-  const markAsRead = useCallback(async (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+  const markAsRead = useCallback(
+    async (id: string) => {
+      setData((prev: NotificationsResponse | undefined) => ({
+        data: (prev?.data ?? []).map((n) =>
+          n.id === id ? { ...n, read: true } : n,
+        ),
+        unreadCount: Math.max(0, (prev?.unreadCount ?? 0) - 1),
+      }));
 
-    try {
-      await apiClient.put(`/notifications/${id}/read`, {});
-    } catch {
-      // Rollback on failure
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: false } : n)),
-      );
-      setUnreadCount((prev) => prev + 1);
-    }
-  }, []);
+      try {
+        await apiClient.put(`/notifications/${id}/read`, {});
+      } catch {
+        // Rollback on failure
+        setData((prev: NotificationsResponse | undefined) => ({
+          data: (prev?.data ?? []).map((n) =>
+            n.id === id ? { ...n, read: false } : n,
+          ),
+          unreadCount: (prev?.unreadCount ?? 0) + 1,
+        }));
+      }
+    },
+    [setData],
+  );
 
   const markAllAsRead = useCallback(async () => {
-    const previousNotifications = notifications;
-    const previousCount = unreadCount;
+    const previousData = data;
 
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setUnreadCount(0);
+    setData((prev: NotificationsResponse | undefined) => ({
+      data: (prev?.data ?? []).map((n) => ({ ...n, read: true })),
+      unreadCount: 0,
+    }));
 
     try {
       await apiClient.put('/notifications/read-all', {});
     } catch {
       // Rollback on failure
-      setNotifications(previousNotifications);
-      setUnreadCount(previousCount);
+      if (previousData) setData(previousData);
     }
-  }, [notifications, unreadCount]);
+  }, [data, setData]);
 
   return { notifications, unreadCount, isLoading, markAsRead, markAllAsRead };
 }

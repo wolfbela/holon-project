@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { CreateReplyInput, Reply, AuthorType } from '@holon/shared';
 import { AppError } from '../utils/AppError';
+import { assertCanAccessTicket } from '../utils/accessControl';
 import { JwtPayload } from '../middleware/auth';
 
 function toReply(row: {
@@ -36,9 +37,7 @@ export async function createReply(
     throw new AppError('Ticket not found', 404);
   }
 
-  if (user.role !== 'admin' && ticket.user_id !== user.userId) {
-    throw new AppError('Forbidden', 403);
-  }
+  assertCanAccessTicket(user, ticket.user_id);
 
   if (ticket.status === 'closed') {
     throw new AppError('Cannot reply to a closed ticket', 400);
@@ -74,9 +73,7 @@ export async function listReplies(
     throw new AppError('Ticket not found', 404);
   }
 
-  if (user.role !== 'admin' && ticket.user_id !== user.userId) {
-    throw new AppError('Forbidden', 403);
-  }
+  assertCanAccessTicket(user, ticket.user_id);
 
   const rows = await db
     .selectFrom('replies')

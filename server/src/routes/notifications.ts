@@ -1,5 +1,6 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth';
+import { asyncHandler } from '../utils/asyncHandler';
 import {
   listNotifications,
   markAsRead,
@@ -11,40 +12,28 @@ const router = Router();
 router.get(
   '/',
   requireAuth(),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await listNotifications(req.user!);
-      res.json(result);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await listNotifications(req.user!);
+    res.json(result);
+  }),
 );
 
 router.put(
   '/read-all',
   requireAuth(),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await markAllAsRead(req.user!);
-      res.json({ message: 'All notifications marked as read' });
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req: Request, res: Response) => {
+    await markAllAsRead(req.user!);
+    res.json({ message: 'All notifications marked as read' });
+  }),
 );
 
 router.put(
   '/:id/read',
   requireAuth(),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const notification = await markAsRead(req.params.id as string, req.user!);
-      res.json(notification);
-    } catch (err) {
-      next(err);
-    }
-  },
+  asyncHandler(async (req: Request, res: Response) => {
+    const notification = await markAsRead(req.params.id as string, req.user!);
+    res.json(notification);
+  }),
 );
 
 export default router;

@@ -2,9 +2,9 @@
 
 import { useCallback, useState } from 'react';
 import { motion } from 'motion/react';
-import { RefreshCw } from 'lucide-react';
 import type { TicketStatus } from '@shared/types/ticket';
 import { Button } from '@/components/ui/button';
+import { ErrorRetry } from '@/components/error-retry';
 import { useTickets } from '@/hooks/use-tickets';
 import { StatusFilter } from './_components/status-filter';
 import { TicketList } from './_components/ticket-list';
@@ -18,13 +18,10 @@ export default function MyTicketsPage() {
     page: currentPage,
   });
 
-  const handleStatusChange = useCallback(
-    (status: TicketStatus | undefined) => {
-      setStatusFilter(status);
-      setCurrentPage(1);
-    },
-    [],
-  );
+  const handleStatusChange = useCallback((status: TicketStatus | undefined) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  }, []);
 
   const handleClearFilter = useCallback(() => {
     setStatusFilter(undefined);
@@ -56,27 +53,10 @@ export default function MyTicketsPage() {
       )}
 
       {hasError && !isLoading ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
-        >
-          <p className="text-lg font-medium text-foreground">
-            Something went wrong
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            We couldn&apos;t load your tickets. Please try again.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4 gap-2 rounded-full"
-            onClick={retry}
-          >
-            <RefreshCw className="size-3.5" />
-            Try again
-          </Button>
-        </motion.div>
+        <ErrorRetry
+          message="We couldn't load your tickets. Please try again."
+          onRetry={retry}
+        />
       ) : (
         <div className="mt-6">
           <TicketList

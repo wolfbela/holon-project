@@ -1,43 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { Product } from '@shared/types/product';
-import { apiClient, ApiClientError } from '@/lib/api-client';
-import { toast } from 'sonner';
+import { apiClient } from '@/lib/api-client';
+import { useFetch } from './use-fetch';
 
 export function useProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const fetchedRef = useRef(false);
+  const fetcher = useCallback(() => apiClient.get<Product[]>('/products'), []);
 
-  const fetchProducts = useCallback(async () => {
-    setIsLoading(true);
-    setHasError(false);
-    try {
-      const data = await apiClient.get<Product[]>('/products');
-      setProducts(data);
-    } catch (error) {
-      setHasError(true);
-      if (error instanceof ApiClientError) {
-        toast.error(error.body.error);
-      } else {
-        toast.error('Failed to load products. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const {
+    data: products,
+    isLoading,
+    hasError,
+    retry,
+  } = useFetch({
+    fetcher,
+    errorMessage: 'Failed to load products. Please try again.',
+  });
 
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchProducts();
-  }, [fetchProducts]);
-
-  const retry = useCallback(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  return { products, isLoading, hasError, retry };
+  return { products: products ?? [], isLoading, hasError, retry };
 }

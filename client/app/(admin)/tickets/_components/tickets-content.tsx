@@ -3,20 +3,28 @@
 import { useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'motion/react';
-import { RefreshCw, Ticket as TicketIcon } from 'lucide-react';
-import type { Ticket, TicketStatus, TicketPriority } from '@shared/types/ticket';
+import { Ticket as TicketIcon } from 'lucide-react';
+import type {
+  Ticket,
+  TicketStatus,
+  TicketPriority,
+} from '@shared/types/ticket';
 import type { SortField, SortOrder } from '@/hooks/use-admin-tickets';
 import { useAdminTickets } from '@/hooks/use-admin-tickets';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorRetry } from '@/components/error-retry';
 import { PaginationControls } from '@/components/pagination-controls';
 import { TicketsToolbar } from './tickets-toolbar';
 import { TicketsTable } from './tickets-table';
 import { AdminTicketCard } from './admin-ticket-card';
-import { TicketsTableSkeleton, TicketsCardSkeleton } from './tickets-table-skeleton';
-import { DeleteTicketDialog } from './delete-ticket-dialog';
+import {
+  TicketsTableSkeleton,
+  TicketsCardSkeleton,
+} from './tickets-table-skeleton';
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 
 export function TicketsContent() {
   const router = useRouter();
@@ -37,12 +45,8 @@ export function TicketsContent() {
   const [order, setOrder] = useState<SortOrder>(
     (searchParams.get('order') as SortOrder) || 'desc',
   );
-  const [page, setPage] = useState(
-    Number(searchParams.get('page')) || 1,
-  );
-  const [limit, setLimit] = useState(
-    Number(searchParams.get('limit')) || 10,
-  );
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+  const [limit, setLimit] = useState(Number(searchParams.get('limit')) || 10);
 
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<Ticket | null>(null);
@@ -180,27 +184,10 @@ export function TicketsContent() {
       )}
 
       {hasError && !isLoading ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
-        >
-          <p className="text-lg font-medium text-foreground">
-            Something went wrong
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            We couldn&apos;t load the tickets. Please try again.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4 gap-2 rounded-full"
-            onClick={retry}
-          >
-            <RefreshCw className="size-3.5" />
-            Try again
-          </Button>
-        </motion.div>
+        <ErrorRetry
+          message="We couldn't load the tickets. Please try again."
+          onRetry={retry}
+        />
       ) : (
         <div className="mt-6">
           {isLoading ? (
@@ -287,14 +274,24 @@ export function TicketsContent() {
         </div>
       )}
 
-      <DeleteTicketDialog
-        ticket={deleteTarget}
+      <ConfirmDeleteDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
+        title="Delete ticket?"
+        description={
+          <>
+            This will permanently delete ticket{' '}
+            <span className="font-semibold text-foreground">
+              {deleteTarget?.display_id}
+            </span>{' '}
+            &mdash; &ldquo;{deleteTarget?.subject}&rdquo;. This action cannot be
+            undone.
+          </>
+        }
       />
     </div>
   );

@@ -1,48 +1,36 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import type { User, RegisterInput } from '@shared/types/user';
 import { apiClient, ApiClientError } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { useFetch } from './use-fetch';
 
 export function useAdminUsers() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const fetchedRef = useRef(false);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setHasError(false);
-      const data = await apiClient.get<User[]>('/admin/users');
-      setUsers(data);
-    } catch (error) {
-      setHasError(true);
-      if (error instanceof ApiClientError) {
-        toast.error(error.body.error);
-      } else {
-        toast.error('Failed to load team members.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const fetcher = useCallback(() => apiClient.get<User[]>('/admin/users'), []);
 
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchUsers();
-  }, [fetchUsers]);
+  const {
+    data,
+    isLoading,
+    hasError,
+    retry,
+    setData: setUsers,
+  } = useFetch({
+    fetcher,
+    errorMessage: 'Failed to load team members.',
+  });
+
+  const users: User[] = data ?? [];
 
   const createUser = useCallback(
     async (input: RegisterInput): Promise<boolean> => {
       try {
         setIsCreating(true);
         const newUser = await apiClient.post<User>('/admin/users', input);
-        setUsers((prev) => [newUser, ...prev]);
+        setUsers((prev: User[]) => [newUser, ...(prev ?? [])]);
         toast.success('Admin added successfully.');
         return true;
       } catch (error) {
@@ -56,13 +44,13 @@ export function useAdminUsers() {
         setIsCreating(false);
       }
     },
-    [],
+    [setUsers],
   );
 
   const deleteUser = useCallback(
     async (id: string) => {
       const previousUsers = users;
-      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setUsers((prev: User[]) => (prev ?? []).filter((u) => u.id !== id));
       try {
         setIsDeleting(true);
         await apiClient.del(`/admin/users/${id}`);
@@ -78,13 +66,8 @@ export function useAdminUsers() {
         setIsDeleting(false);
       }
     },
-    [users],
+    [users, setUsers],
   );
-
-  const retry = useCallback(() => {
-    fetchedRef.current = false;
-    fetchUsers();
-  }, [fetchUsers]);
 
   return {
     users,
