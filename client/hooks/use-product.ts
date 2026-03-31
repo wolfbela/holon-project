@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Product } from '@shared/types/product';
-import { apiClient, ApiClientError } from '@/lib/api-client';
-import { toast } from 'sonner';
+import { apiClient } from '@/lib/api-client';
 
 export function useProduct(id: string) {
   const [product, setProduct] = useState<Product | null>(null);
@@ -17,13 +16,8 @@ export function useProduct(id: string) {
     try {
       const data = await apiClient.get<Product>(`/products/${id}`);
       setProduct(data);
-    } catch (error) {
+    } catch {
       setHasError(true);
-      if (error instanceof ApiClientError) {
-        toast.error(error.body.error);
-      } else {
-        toast.error('Failed to load product. Please try again.');
-      }
     } finally {
       setIsLoading(false);
     }
