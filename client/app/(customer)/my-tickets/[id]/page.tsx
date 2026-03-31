@@ -1,16 +1,10 @@
+import { TicketDetailContent } from './_components/ticket-detail-content';
+
 export default async function TicketDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="text-2xl font-bold">Ticket {id}</h1>
-      <p className="mt-2 text-muted-foreground">
-        Ticket detail and conversation coming soon.
-      </p>
-    </div>
-  );
+  return <TicketDetailContent id={id} />;
 }
